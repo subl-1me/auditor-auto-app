@@ -5,10 +5,4 @@ export default interface ReservationSheet {
     isCredit: boolean;
     amount: number;
   };
-  invoices: Invoice[];
-}
-
-interface Invoice {
-  rfc: string;
-  name: string;
 }

@@ -2,7 +2,7 @@ import MenuStack from "../../MenuStack";
 import Login from "./LoginMenu";
 import User from "./types/User";
 import FrontService from "../../services/FrontService";
-import * as FormData from "form-data";
+import FormData from "form-data";
 import Scrapper from "../../Scrapper";
 import { write } from "../../utils/frontSystemUtils";
 

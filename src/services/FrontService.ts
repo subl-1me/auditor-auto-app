@@ -73,7 +73,6 @@ export default class FrontService {
     //TODO: Fix this error with Typescript, doesn't recognize
     // .ENV variables so endpoint must be optional
     let response;
-    console.log(`Generando request a: ${endpoint}`);
     if (authentication) {
       response = await this.http({
         method: "GET",

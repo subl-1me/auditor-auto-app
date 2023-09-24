@@ -61,7 +61,7 @@ export default class Scrapper {
     return result[0];
   }
 
-  extractReservationSheetData(): ReservationSheet[] {
+  extractSheetBasicData(): ReservationSheet[] {
     // Localize how many sheets are
     const sheetElemPattern = /"FolioItem" id="td_\d"|"FolioClosed" id="td_\d"/g;
     const sheetElemItems = this.htmlBody.match(sheetElemPattern);
@@ -93,12 +93,12 @@ export default class Scrapper {
           const sheetBalanceSpan = result[0];
           const balance = sheetBalanceSpan.match(BalanceAmountPattern);
           if (balance) {
-            const isBalanceCredit = !balance.includes("-");
+            const isBalanceCredit = balance.includes("-");
             // Clean balance string
             const balanceAmount = Number(balance[0].replace(/[$,-]/g, ""));
             const isBalanceZero = balanceAmount === 0;
 
-            console.log({ isBalanceCredit, isBalanceZero, balanceAmount });
+            // console.log({ isBalanceCredit, isBalanceZero, balanceAmount });
           } else {
             throw new Error("SCRAPPER: Error trying to extract balance");
           }
@@ -130,7 +130,6 @@ export default class Scrapper {
           sheetNo: i,
           isOpen: false,
           balance: { isCredit: false, amount: 0 },
-          invoices: [],
         });
       }
 

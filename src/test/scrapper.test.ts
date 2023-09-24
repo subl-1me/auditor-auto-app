@@ -8,6 +8,6 @@ import MockData from "./mock/mock-data";
 describe("Scrapper tests", function () {
   it("Should extract reservation sheet data", function () {
     const scrapper = new Scrapper(MockData.sheetsDataGrid);
-    const result = scrapper.extractReservationSheetData();
+    const result = scrapper.extractSheetBasicData();
   });
 });

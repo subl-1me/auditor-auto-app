@@ -5,7 +5,8 @@ import TokenStorage from "../../utils/TokenStorage";
 import inquirer from "inquirer";
 
 // shared utils
-import { getReservationSheetsData } from "../../utils/reservationUtlis";
+import { getSheetBasicData } from "../../utils/reservationUtlis";
+import ReservationSheet from "../../types/ReservationSheet";
 
 const { FRONT_API_RSRV_LIST } = process.env;
 
@@ -113,7 +114,13 @@ export default class Invoicer {
     );
 
     const reservationId = reservation.reservationId.match(/\d+/)[0];
-    const res = await getReservationSheetsData(reservationId);
+    const sheets = await getSheetBasicData(reservationId);
+    await this.closeCurrentSheet(sheets);
+  }
+
+  private async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
+    const currentSheet = sheets.find((sheet) => sheet.isOpen);
+    console.log(currentSheet);
   }
 
   async invoiceAllDepartures(departures: any): Promise<any> {
@@ -122,7 +129,9 @@ export default class Invoicer {
       console.log(
         `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room}`
       );
-      let res = await getReservationSheetsData(reservationId);
+      let res = await getSheetBasicData(reservationId);
+      //TODO: get the last sheet used and verify if balance = 0
+
       console.log("\n\n");
     }
   }

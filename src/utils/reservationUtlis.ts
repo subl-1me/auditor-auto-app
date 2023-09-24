@@ -8,7 +8,7 @@ const frontService = new FrontService();
 
 const { FRONT_API_RSRV_SHEETS } = process.env;
 
-export async function getReservationSheetsData(
+export async function getSheetBasicData(
   reservationId: string
 ): Promise<ReservationSheet[]> {
   const _FRONT_API_RSRV_SHEETS = FRONT_API_RSRV_SHEETS?.replace(
@@ -26,7 +26,7 @@ export async function getReservationSheetsData(
   );
 
   const scrapper = new Scrapper(response);
-  const sheets = scrapper.extractReservationSheetData();
-  console.log(sheets);
+  const sheets = scrapper.extractSheetBasicData();
+  // console.log(sheets);
   return [];
 }
