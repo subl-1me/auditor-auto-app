@@ -155,7 +155,7 @@ export default class Invoicer {
       console.log(
         `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room}`
       );
-      const sheets = await getReservationLedgerList(reservationId);
+      let sheets = await getReservationLedgerList(reservationId);
       console.log(sheets);
 
       //TODO: get the last sheet used and verify if balance = 0
