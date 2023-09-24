@@ -27,6 +27,31 @@ export default class Invoicer {
     }
 
     // A list of filters to use while fetching for departures list
+    // const listOptions = {
+    //   pc: "KFwHWn911eaVeJhL++adWg==",
+    //   ph: false,
+    //   pn: "",
+    //   ci: "",
+    //   gpi: "",
+    //   ti: "",
+    //   rc: "",
+    //   rm: "",
+    //   fm: "",
+    //   to: "",
+    //   fq: "",
+    //   rs: "",
+    //   st: "EC",
+    //   grp: "",
+    //   gs: "CHIN,NOSHOW,POST",
+    //   sidx: "NameGuest",
+    //   sord: "asc",
+    //   rows: 100,
+    //   page: 1,
+    //   ss: false,
+    //   rcss: "",
+    //   user: "HTJUGALDEA",
+    // };
+
     const listOptions = {
       pc: "KFwHWn911eaVeJhL++adWg==",
       ph: false,
@@ -39,10 +64,10 @@ export default class Invoicer {
       fm: "",
       to: "",
       fq: "",
-      rs: "",
-      st: "LS",
+      rs: "CHIN,NOSHOW,POST",
+      st: "EC",
       grp: "",
-      gs: "CHOUT,CHIN,NOSHOW,POST",
+      gs: "",
       sidx: "NameGuest",
       sord: "asc",
       rows: 100,
@@ -118,8 +143,9 @@ export default class Invoicer {
     await this.closeCurrentSheet(sheets);
   }
 
-  private async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
+  async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
     const currentSheet = sheets.find((sheet) => sheet.isOpen);
+    console.log("Current sheet is: \n");
     console.log(currentSheet);
   }
 
@@ -129,7 +155,10 @@ export default class Invoicer {
       console.log(
         `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room}`
       );
-      let res = await getSheetBasicData(reservationId);
+      let sheets = await getSheetBasicData(reservationId);
+      console.log(sheets);
+      await this.closeCurrentSheet(sheets);
+
       //TODO: get the last sheet used and verify if balance = 0
 
       console.log("\n\n");

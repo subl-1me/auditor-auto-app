@@ -4,3 +4,4 @@ dist/
 auth.json
 src/config/config.json
 src/MenuManager.ts
+src/test/mock/

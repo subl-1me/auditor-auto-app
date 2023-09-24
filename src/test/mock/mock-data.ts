@@ -1217,6 +1217,10 @@ const MockData = {
   </html>
   
   `,
+  sheets: [
+    { sheetNo: 1, isOpen: false, balance: { isCredit: false, amount: 0 } },
+    { sheetNo: 2, isOpen: true, balance: { isCredit: false, amount: 0 } },
+  ],
 };
 
 export default MockData;
