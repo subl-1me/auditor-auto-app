@@ -97,7 +97,6 @@ export default class Scrapper {
             // Clean balance string
             const balanceAmount = Number(balance[0].replace(/[$,-]/g, ""));
             const isBalanceZero = balanceAmount === 0;
-
             // console.log({ isBalanceCredit, isBalanceZero, balanceAmount });
           } else {
             throw new Error("SCRAPPER: Error trying to extract balance");
