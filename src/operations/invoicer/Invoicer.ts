@@ -5,10 +5,10 @@ import TokenStorage from "../../utils/TokenStorage";
 import inquirer from "inquirer";
 
 // shared utils
-import { getSheetBasicData } from "../../utils/reservationUtlis";
-import ReservationSheet from "../../types/ReservationSheet";
+import { getReservationLedgerList } from "../../utils/reservationUtlis";
+import Ledger from "../../types/Ledger";
 
-const { FRONT_API_RSRV_LIST } = process.env;
+const { FRONT_API_RSRV_LIST, FRONT_API_RSRV_FOLIOS } = process.env;
 
 export default class Invoicer {
   private frontService: FrontService;
@@ -27,6 +27,31 @@ export default class Invoicer {
     }
 
     // A list of filters to use while fetching for departures list
+    // const listOptions = {
+    //   pc: "KFwHWn911eaVeJhL++adWg==",
+    //   ph: false,
+    //   pn: "",
+    //   ci: "",
+    //   gpi: "",
+    //   ti: "",
+    //   rc: "",
+    //   rm: "",
+    //   fm: "",
+    //   to: "",
+    //   fq: "",
+    //   rs: "",
+    //   st: "LS",
+    //   grp: "",
+    //   gs: "CHOUT,CHIN,NOSHOW,POST",
+    //   sidx: "NameGuest",
+    //   sord: "asc",
+    //   rows: 100,
+    //   page: 1,
+    //   ss: false,
+    //   rcss: "",
+    //   user: "HTJUGALDEA",
+    // };
+
     const listOptions = {
       pc: "KFwHWn911eaVeJhL++adWg==",
       ph: false,
@@ -39,10 +64,10 @@ export default class Invoicer {
       fm: "",
       to: "",
       fq: "",
-      rs: "",
-      st: "LS",
+      rs: "CHIN,NOSHOW,POST",
+      st: "EC",
       grp: "",
-      gs: "CHOUT,CHIN,NOSHOW,POST",
+      gs: "",
       sidx: "NameGuest",
       sord: "asc",
       rows: 100,
@@ -114,22 +139,25 @@ export default class Invoicer {
     );
 
     const reservationId = reservation.reservationId.match(/\d+/)[0];
-    const sheets = await getSheetBasicData(reservationId);
-    await this.closeCurrentSheet(sheets);
+    const sheets = await getReservationLedgerList(reservationId);
+    console.log(sheets);
+    // await this.closeCurrentSheet(sheets);
   }
 
-  private async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
-    const currentSheet = sheets.find((sheet) => sheet.isOpen);
-    console.log(currentSheet);
-  }
+  // private async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
+  //   const currentSheet = sheets.find((sheet) => sheet.isOpen);
+  //   console.log(currentSheet);
+  // }
 
   async invoiceAllDepartures(departures: any): Promise<any> {
     for (let i = 0; i < departures.length; i++) {
-      let reservationId = departures[i].reservationId.match(/\d+/)[0];
+      const reservationId = departures[i].reservationId.match(/\d+/)[0];
       console.log(
         `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room}`
       );
-      let res = await getSheetBasicData(reservationId);
+      const sheets = await getReservationLedgerList(reservationId);
+      console.log(sheets);
+
       //TODO: get the last sheet used and verify if balance = 0
 
       console.log("\n\n");
