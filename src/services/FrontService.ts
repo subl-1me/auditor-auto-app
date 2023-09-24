@@ -2,6 +2,7 @@ import Axios from "axios";
 import { HttpsCookieAgent } from "http-cookie-agent/http";
 import { CookieJar } from "tough-cookie";
 import * as FormData from "form-data";
+import Ledger from "../types/Ledger";
 
 export default class FrontService {
   private jar: CookieJar;
@@ -41,7 +42,9 @@ export default class FrontService {
           data: formData,
           headers: {
             Authorization: `Bearer ${authentication.bearerToken}`,
-            Cookie: authentication.aspNetTokenCookie,
+            Cookie:
+              authentication.aspNetTokenCookie +
+              ` mAutSession=${authentication.mAutSession}`,
           },
         });
       } else {
@@ -69,7 +72,10 @@ export default class FrontService {
    * @param endpoint API URL
    * @returns response data as string or object
    */
-  async getRequest(endpoint?: string, authentication?: any): Promise<string> {
+  async getRequest(
+    endpoint?: string,
+    authentication?: any
+  ): Promise<string | any[]> {
     //TODO: Fix this error with Typescript, doesn't recognize
     // .ENV variables so endpoint must be optional
     let response;
@@ -79,7 +85,9 @@ export default class FrontService {
         url: endpoint,
         headers: {
           Authorization: `Bearer ${authentication.bearerToken}`,
-          Cookie: authentication.aspNetTokenCookie,
+          Cookie:
+            authentication.aspNetTokenCookie +
+            ` mAutSession=${authentication.mAutSession}`,
         },
       });
       const { statusCode } = response.request.res;

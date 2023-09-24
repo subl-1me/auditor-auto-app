@@ -109,7 +109,11 @@ export default class Logger {
 
   async getRequestVerificationToken(): Promise<string> {
     const htmlBody = await this.frontService.getRequest(FRONT_API_LOGIN_PAGE);
-
+    if (typeof htmlBody !== "string") {
+      throw new Error(
+        "Error trying to get HTML body. Expected string as as response;"
+      );
+    }
     const scrapper = new Scrapper(htmlBody);
     const verificationToken = scrapper.extractVerificationToken();
     return verificationToken;
