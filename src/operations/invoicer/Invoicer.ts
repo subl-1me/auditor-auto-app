@@ -155,11 +155,10 @@ export default class Invoicer {
       console.log(
         `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room}`
       );
-      let sheets = await getReservationLedgerList(reservationId);
-      console.log(sheets);
-
-      //TODO: get the last sheet used and verify if balance = 0
-
+      const ledgers = await getReservationLedgerList(reservationId);
+      //TODO: get current ledger
+      //TODO: set ledger status to CLOSED
+      //TODO: start invoicer process :)
       console.log("\n\n");
     }
   }
