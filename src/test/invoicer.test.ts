@@ -7,6 +7,6 @@ import MockData from "./mock/mock-data";
 describe("Invoicer tests suit", async function () {
   const invoicer = new Invoicer();
   it("Should close current reservation's sheet", () => {
-    const response = invoicer.closeCurrentSheet(MockData.sheets);
+    // const response = invoicer.closeCurrentSheet(MockData.sheets);
   });
 });

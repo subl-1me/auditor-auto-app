@@ -75,62 +75,33 @@ export default class Scrapper {
     return sheetElemItems ? sheetElemItems : null;
   }
 
-  // extractSheetBalance(): string | null {
-  //   const sheetBalancePattern = new RegExp(
-  //     `<span id="rptFoliosContent_ctl\\d+_lblfolio_balance">([\\s\\S\\t.]*?)<\/span>`
-  //   );
-  //   return null;
-  // }
+  extractReservationEmailContact(): string | null {
+    const GuestEmailFieldPattern = new RegExp(
+      `s_mail" name="txtPers_mail" placeholer="(.*)" type="text" value="(.*)" />`
+    );
+    const guestEmailFieldElem = this.htmlBody.match(GuestEmailFieldPattern);
+    if (!guestEmailFieldElem) {
+      return null;
+    }
 
-  //   extractSheetBasicData(): ReservationSheet[] {
-  //     return [];
-  //   //   // Localize how many sheets are
-  //   //   let sheets: ReservationSheet[] = [];
-  //   //   const sheetElemItems = this.extractAllSheet();
-  //   //   if (!sheetElemItems) {
-  //   //     throw new Error(
-  //   //       "No matches were found for HTML sheet elements. Verify the pattern."
-  //   //     );
-  //   //   }
+    // Check the email pattern is not required because Front2Go's API do it for us
+    const ValuePattern = /value="([^"]*)"/;
+    const emailValue = guestEmailFieldElem[0].match(ValuePattern);
+    return emailValue ? emailValue[1] : null;
+  }
 
-  //   //   sheetElemItems.forEach((sheetElem, index) => {
-  //   //     if (sheetElem.includes("FolioItem")) {
-  //   //       // It means sheet is open
-  //   //       const dataGridElem = this.extractDataGridElem(index);
-  //   //       if (!dataGridElem) {
-  //   //         throw new Error(
-  //   //           "No matches were found for HTML data-grid element. Verify the pattern."
-  //   //         );
-  //   //       }
+  extractReservationEmailCorp(): string | null {
+    const CorpEmailFieldPattern = new RegExp(
+      `<input class="form-control CajaText" id="txtMail" name="txtMail" placeholer="(.*)" type="text" value="(.*?)" readonly="readonly">`,
+      "i"
+    );
+    const corpEmailFieldElem = this.htmlBody.match(CorpEmailFieldPattern);
+    if (!corpEmailFieldElem) {
+      return null;
+    }
 
-  //   //       const result = dataGridElem[0].match(sheetBalancePattern);
-  //   //       if (result) {
-  //   //         const sheetBalanceSpan = result[0];
-  //   //         const balance = sheetBalanceSpan.match(BalanceAmountPattern);
-  //   //         if (balance) {
-  //   //           const isCredit = balance[0].includes("-");
-  //   //           // Clean balance string
-  //   //           const balanceAmount = Number(balance[0].replace(/[$,-]/g, ""));
-  //   //           sheets.push({
-  //   //             sheetNo: index,
-  //   //             isOpen: true,
-  //   //             balance: { isCredit, amount: balanceAmount },
-  //   //           });
-  //   //         } else {
-  //   //           throw new Error("SCRAPPER: Error trying to extract balance");
-  //   //         }
-  //   //       } else {
-  //   //         throw new Error(`Error trying to get sheet #${index} balance`);
-  //   //       }
-  //   //     } else {
-  //   //       // otherwise put default data
-  //   //       sheets.push({
-  //   //         sheetNo: index,
-  //   //         isOpen: false,
-  //   //         balance: { isCredit: false, amount: 0 },
-  //   //       });
-  //   //     }
-  //   //   });
-  //   //   return sheets;
-  //   // }
+    const ValuePattern = /value="([^"]*)"/;
+    const emailValue = corpEmailFieldElem[0].match(ValuePattern);
+    return emailValue ? emailValue[1] : null;
+  }
 }

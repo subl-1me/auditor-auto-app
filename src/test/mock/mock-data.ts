@@ -1221,6 +1221,8 @@ const MockData = {
     { sheetNo: 1, isOpen: false, balance: { isCredit: false, amount: 0 } },
     { sheetNo: 2, isOpen: true, balance: { isCredit: false, amount: 0 } },
   ],
+  guestContactField: `s_mail" name="txtPers_mail" placeholer="@F2goPMS.Recursos.Traducciones.mail" type="text" value="GENERICPROFILE@FRONT2GO.COM" />`,
+  corpContactField: `<input class="form-control CajaText" id="txtMail" name="txtMail" placeholer="@F2goPMS.Recursos.Traducciones.mail" type="text" value="leticia@ventasturvid.com" readonly="readonly">`,
 };
 
 export default MockData;
