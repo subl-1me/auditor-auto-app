@@ -75,9 +75,20 @@ export default class Scrapper {
     return sheetElemItems ? sheetElemItems : null;
   }
 
+  /**
+   * @description Extracts reservation contact emails
+   * @returns An object that contains guest and corporation email
+   */
+  extractContactEmails(): object {
+    const guestEmail = this.extractReservationEmailContact();
+    const corpEmail = this.extractReservationEmailCorp();
+    return { guestEmail, corpEmail };
+  }
+
   extractReservationEmailContact(): string | null {
     const GuestEmailFieldPattern = new RegExp(
-      `s_mail" name="txtPers_mail" placeholer="(.*)" type="text" value="(.*)" />`
+      `<input class="form-control CajaText txtNRequired" id="txtPers_mail" name="txtPers_mail" placeholer="(.*)" type="text" value="(.*)" />`
+      // `<input class="(.*)" id="(.*)" name="(.*)" placeholer="(.*)" type="(.*)" value="(.*)" readonly="(.*)">`
     );
     const guestEmailFieldElem = this.htmlBody.match(GuestEmailFieldPattern);
     if (!guestEmailFieldElem) {
@@ -92,8 +103,7 @@ export default class Scrapper {
 
   extractReservationEmailCorp(): string | null {
     const CorpEmailFieldPattern = new RegExp(
-      `<input class="form-control CajaText" id="txtMail" name="txtMail" placeholer="(.*)" type="text" value="(.*?)" readonly="readonly">`,
-      "i"
+      `<input class="form-control CajaText" id="txtMail" name="txtMail" placeholer="(.*)" type="text" value="(.*)" />`
     );
     const corpEmailFieldElem = this.htmlBody.match(CorpEmailFieldPattern);
     if (!corpEmailFieldElem) {

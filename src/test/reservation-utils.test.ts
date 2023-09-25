@@ -14,12 +14,8 @@ describe("Reservation-utils test suite", async () => {
   //   });
 
   it("Should get guest & company email contac", () => {
-    const scrapperGuestField = new Scrapper(MockData.guestContactField);
-    const emailContact = scrapperGuestField.extractReservationEmailContact();
-
-    const scrapperCorpField = new Scrapper(MockData.corpContactField);
-    const emailCorp = scrapperCorpField.extractReservationEmailCorp();
-    console.log(emailContact);
-    console.log(emailCorp);
+    const scrapperGuestField = new Scrapper(MockData.contactEmailFields);
+    const emails = scrapperGuestField.extractContactEmails();
+    console.log(emails);
   });
 });

@@ -123,7 +123,7 @@ export async function changeLedgerStatus(
   };
 }
 
-export async function getReservationGuestContact(
+export async function getReservationContact(
   reservationId: string
 ): Promise<any> {
   if (!FRONT_API_RSRV_GUEST_INFO) {
@@ -135,12 +135,17 @@ export async function getReservationGuestContact(
     reservationId
   );
 
-  const htmlBody = await frontService.getRequest(_FRONT_API_RSRV_GUEST_INFO);
+  const authTokens = await TokenStorage.getData();
+  const htmlBody = await frontService.getRequest(
+    _FRONT_API_RSRV_GUEST_INFO,
+    authTokens
+  );
   if (typeof htmlBody !== "string") {
     throw new Error(
       "Error trying to get guest info contact. Expected string as response"
     );
   }
   const scrapper = new Scrapper(htmlBody);
-  const emails = scrapper.extractReservationEmailContact();
+  const emails = scrapper.extractContactEmails();
+  return emails;
 }
