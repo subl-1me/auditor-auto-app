@@ -5,10 +5,19 @@ import TokenStorage from "../../utils/TokenStorage";
 import inquirer from "inquirer";
 
 // shared utils
-import { getReservationLedgerList } from "../../utils/reservationUtlis";
+import {
+  getReservationLedgerList,
+  getLedgerMovements,
+  getReservationContact,
+  changeLedgerStatus,
+} from "../../utils/reservationUtlis";
 import Ledger from "../../types/Ledger";
 
-const { FRONT_API_RSRV_LIST, FRONT_API_RSRV_FOLIOS } = process.env;
+const {
+  FRONT_API_RSRV_LIST,
+  FRONT_API_RSRV_FOLIOS,
+  FRONT_API_RSRV_ADD_NEW_LEDGER,
+} = process.env;
 
 export default class Invoicer {
   private frontService: FrontService;
@@ -27,31 +36,6 @@ export default class Invoicer {
     }
 
     // A list of filters to use while fetching for departures list
-    // const listOptions = {
-    //   pc: "KFwHWn911eaVeJhL++adWg==",
-    //   ph: false,
-    //   pn: "",
-    //   ci: "",
-    //   gpi: "",
-    //   ti: "",
-    //   rc: "",
-    //   rm: "",
-    //   fm: "",
-    //   to: "",
-    //   fq: "",
-    //   rs: "",
-    //   st: "LS",
-    //   grp: "",
-    //   gs: "CHOUT,CHIN,NOSHOW,POST",
-    //   sidx: "NameGuest",
-    //   sord: "asc",
-    //   rows: 100,
-    //   page: 1,
-    //   ss: false,
-    //   rcss: "",
-    //   user: "HTJUGALDEA",
-    // };
-
     const listOptions = {
       pc: "KFwHWn911eaVeJhL++adWg==",
       ph: false,
@@ -64,10 +48,10 @@ export default class Invoicer {
       fm: "",
       to: "",
       fq: "",
-      rs: "CHIN,NOSHOW,POST",
-      st: "EC",
+      rs: "",
+      st: "LS",
       grp: "",
-      gs: "",
+      gs: "CHOUT,CHIN,NOSHOW,POST",
       sidx: "NameGuest",
       sord: "asc",
       rows: 100,
@@ -76,6 +60,31 @@ export default class Invoicer {
       rcss: "",
       user: "HTJUGALDEA",
     };
+
+    // const listOptions = {
+    //   pc: "KFwHWn911eaVeJhL++adWg==",
+    //   ph: false,
+    //   pn: "",
+    //   ci: "",
+    //   gpi: "",
+    //   ti: "",
+    //   rc: "",
+    //   rm: "",
+    //   fm: "",
+    //   to: "",
+    //   fq: "",
+    //   rs: "CHIN,NOSHOW,POST",
+    //   st: "EC",
+    //   grp: "",
+    //   gs: "",
+    //   sidx: "NameGuest",
+    //   sord: "asc",
+    //   rows: 100,
+    //   page: 1,
+    //   ss: false,
+    //   rcss: "",
+    //   user: "HTJUGALDEA",
+    // };
 
     const authTokens = await TokenStorage.getData();
     const response = await this.frontService.postRequest(
@@ -140,7 +149,9 @@ export default class Invoicer {
 
     const reservationId = reservation.reservationId.match(/\d+/)[0];
     const sheets = await getReservationLedgerList(reservationId);
+    const emails = await getReservationContact(reservationId);
     console.log(sheets);
+    console.log(emails);
     // await this.closeCurrentSheet(sheets);
   }
 
@@ -156,7 +167,37 @@ export default class Invoicer {
         `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room}`
       );
       const ledgers = await getReservationLedgerList(reservationId);
+      const emails = await getReservationContact(reservationId);
+      console.log(ledgers);
+      console.log(emails);
       //TODO: get current ledger
+      const currentLedger = ledgers.find((ledger) => ledger.status === "OPEN");
+
+      //TODO: Open a new ledger to close current ledger just in case there's 1 ledger or current is the last
+      const lastLedger = ledgers.reverse()[0];
+      if (
+        ledgers.length === 1 ||
+        lastLedger.ledgerNo === currentLedger?.ledgerNo
+      ) {
+        console.log("Openning a new ledger...");
+        if (!FRONT_API_RSRV_ADD_NEW_LEDGER) {
+          throw new Error(
+            "FRONT_API_RSRV_ADD_NEW_LEDGER endpoint cannot be empty"
+          );
+        }
+
+        const authTokens = await TokenStorage.getData();
+        const _FRONT_API_RSRV_ADD_NEW_LEDGER =
+          FRONT_API_RSRV_ADD_NEW_LEDGER.replace("{idField}", reservationId);
+        const response = await this.frontService.postRequest(
+          {},
+          _FRONT_API_RSRV_ADD_NEW_LEDGER,
+          authTokens
+        );
+
+        console.log(response.data);
+      }
+
       //TODO: set ledger status to CLOSED
       //TODO: start invoicer process :)
       console.log("\n\n");
