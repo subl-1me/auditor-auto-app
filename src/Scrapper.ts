@@ -87,10 +87,13 @@ export default class Scrapper {
 
   extractReservationEmailContact(): string | null {
     const GuestEmailFieldPattern = new RegExp(
-      `<input class="form-control CajaText txtNRequired" id="txtPers_mail" name="txtPers_mail" placeholer="(.*)" type="text" value="(.*)" />`
+      `<input class="form-control CajaText txtNRequired" id="txtPers_mail" name="txtPers_mail" placeholer="(.*)" type="text" value="(.*)" readonly="readOnly" />`
       // `<input class="(.*)" id="(.*)" name="(.*)" placeholer="(.*)" type="(.*)" value="(.*)" readonly="(.*)">`
     );
+    `<input class="form-control CajaText txtNRequired" id="txtPers_mail" name="txtPers_mail" placeholer="@F2goPMS.Recursos.Traducciones.mail" type="text" value="HDSJSN@GDJ.COM" readonly="readOnly">`;
+    // `<input class="form-control CajaText txtRequired" id="txtPers_mail" name="txtPers_mail" placeholer="@F2goPMS.Recursos.Traducciones.mail" type="text" value="HDSJSN@GDJ.COM" />`;
     const guestEmailFieldElem = this.htmlBody.match(GuestEmailFieldPattern);
+    // console.log(guestEmailFieldElem);
     if (!guestEmailFieldElem) {
       return null;
     }
@@ -103,8 +106,9 @@ export default class Scrapper {
 
   extractReservationEmailCorp(): string | null {
     const CorpEmailFieldPattern = new RegExp(
-      `<input class="form-control CajaText" id="txtMail" name="txtMail" placeholer="(.*)" type="text" value="(.*)" />`
+      `<input class="form-control CajaText" id="txtMail" name="txtMail" placeholer="(.*)" type="text" value="(.*)">`
     );
+
     const corpEmailFieldElem = this.htmlBody.match(CorpEmailFieldPattern);
     if (!corpEmailFieldElem) {
       return null;

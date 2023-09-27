@@ -9,6 +9,7 @@ const {
   FRONT_API_RSRV_FOLIOS_MOVS,
   FRONT_API_RSRV_CHANGE_LEDGER_STATUS,
   FRONT_API_RSRV_GUEST_INFO,
+  FRONT_API_RSRV_ADD_NEW_LEDGER,
 } = process.env;
 
 export async function getReservationLedgerList(
@@ -88,7 +89,8 @@ export async function getLedgerMovements(ledgerCode: string): Promise<any> {
 
 export async function changeLedgerStatus(
   reservationId: string,
-  ledgerNo: number
+  ledgerNo: number,
+  reservationStatus: string
 ): Promise<any> {
   if (!FRONT_API_RSRV_CHANGE_LEDGER_STATUS) {
     throw new Error(
@@ -99,7 +101,7 @@ export async function changeLedgerStatus(
   const payload = {
     folio_code: `${reservationId}.${ledgerNo}`,
     guest_code: reservationId,
-    guest_status: "CHIN",
+    guest_status: reservationStatus,
     max_folios: 8,
     prop_code: "CECJS",
   };
@@ -112,15 +114,32 @@ export async function changeLedgerStatus(
   );
 
   if (response.data !== "ok") {
-    throw new Error(
-      "Error trying to change ledger status. Please log in again"
-    );
+    throw new Error(`Error changing reservation status: ${response.data}`);
   }
 
   return {
     status: 200,
     message: "OK",
   };
+}
+
+export async function addNewLegder(reservationId: string): Promise<void> {
+  if (!FRONT_API_RSRV_ADD_NEW_LEDGER) {
+    throw new Error("FRONT_API_RSRV_ADD_NEW_LEDGER endpoint cannot be empty");
+  }
+
+  const authTokens = await TokenStorage.getData();
+  const _FRONT_API_RSRV_ADD_NEW_LEDGER = FRONT_API_RSRV_ADD_NEW_LEDGER.replace(
+    "{idField}",
+    reservationId
+  );
+  const response = await frontService.postRequest(
+    {},
+    _FRONT_API_RSRV_ADD_NEW_LEDGER,
+    authTokens
+  );
+
+  return response;
 }
 
 export async function getReservationContact(

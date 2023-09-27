@@ -10,6 +10,7 @@ import {
   getLedgerMovements,
   getReservationContact,
   changeLedgerStatus,
+  addNewLegder,
 } from "../../utils/reservationUtlis";
 import Ledger from "../../types/Ledger";
 
@@ -161,45 +162,59 @@ export default class Invoicer {
   // }
 
   async invoiceAllDepartures(departures: any): Promise<any> {
+    let pendingToInvoice = [];
     for (let i = 0; i < departures.length; i++) {
       const reservationId = departures[i].reservationId.match(/\d+/)[0];
       console.log(
-        `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room}`
+        `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room} \n\n`
       );
       const ledgers = await getReservationLedgerList(reservationId);
-      const emails = await getReservationContact(reservationId);
-      console.log(ledgers);
-      console.log(emails);
+      // const emails = await getReservationContact(reservationId);
+      // console.log(ledgers);
+      // console.log(emails);
       //TODO: get current ledger
       const currentLedger = ledgers.find((ledger) => ledger.status === "OPEN");
+      if (!currentLedger) {
+        throw new Error(
+          "No open ledgers to operate was found. Check reservation status."
+        );
+      }
+
+      if (currentLedger.balance !== 0) {
+        console.log(
+          `Current ledger no. ${currentLedger.ledgerNo} balance is ${currentLedger.balance}.\n`
+        );
+        console.log(
+          `Reservation room: ${departures[i].room} was marked as pending.`
+        );
+        pendingToInvoice.push(departures[i]);
+        continue;
+      }
 
       //TODO: Open a new ledger to close current ledger just in case there's 1 ledger or current is the last
       const lastLedger = ledgers.reverse()[0];
       if (
         ledgers.length === 1 ||
-        lastLedger.ledgerNo === currentLedger?.ledgerNo
+        lastLedger.ledgerNo === currentLedger.ledgerNo
       ) {
         console.log("Openning a new ledger...");
-        if (!FRONT_API_RSRV_ADD_NEW_LEDGER) {
-          throw new Error(
-            "FRONT_API_RSRV_ADD_NEW_LEDGER endpoint cannot be empty"
-          );
-        }
-
-        const authTokens = await TokenStorage.getData();
-        const _FRONT_API_RSRV_ADD_NEW_LEDGER =
-          FRONT_API_RSRV_ADD_NEW_LEDGER.replace("{idField}", reservationId);
-        const response = await this.frontService.postRequest(
-          {},
-          _FRONT_API_RSRV_ADD_NEW_LEDGER,
-          authTokens
-        );
-
-        console.log(response.data);
+        const addResponse = await addNewLegder(reservationId);
+        console.log(addResponse);
       }
 
-      //TODO: set ledger status to CLOSED
+      //TODO: set current ledger status to CLOSED
+      console.log(
+        `Changing ledger no. ${currentLedger.ledgerNo} status to closed...`
+      );
+      const changeResponse = await changeLedgerStatus(
+        reservationId,
+        currentLedger.ledgerNo,
+        "CHIN"
+      );
+      console.log(changeResponse);
+
       //TODO: start invoicer process :)
+      console.log("finalizing");
       console.log("\n\n");
     }
   }
