@@ -15,7 +15,7 @@ export default class Home {
         choices: [
           "Login",
           "Invoicer",
-          "Print AUD reports",
+          "Print docs",
           "Start Noktos process",
           new inquirer.Separator(),
           "Exit",

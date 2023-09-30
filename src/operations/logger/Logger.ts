@@ -4,7 +4,7 @@ import User from "./types/User";
 import FrontService from "../../services/FrontService";
 import FormData from "form-data";
 import Scrapper from "../../Scrapper";
-import { write } from "../../utils/frontSystemUtils";
+import { write, getConfig } from "../../utils/frontSystemUtils";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -27,16 +27,15 @@ export default class Logger {
       const formData = new FormData();
       formData.append("_hdn001", "KFwHWn911eaVeJhL++adWg==");
       formData.append("_hdn002", "");
-      formData.append("_hdnPropName", "City+Express+Ciudad+Juarez");
+      formData.append("_hdnPropName", "City Express Ciudad Juarez");
       formData.append("_hdnRoleName", "RecepcionT");
-      formData.append("_hdnAppDate", "2023/09/07");
+      formData.append("_hdnAppDate", "2023/09/28");
       formData.append("__RequestVerificationToken", verificationToken);
 
       // I'll use API search endpoint to get ASP token at first request
       const response = await this.frontService.postRequest(
         formData,
-        FRONT_API_SEARCH_RSRV || "",
-        verificationToken
+        FRONT_API_SEARCH_RSRV || ""
       );
 
       const { headers } = response;
@@ -66,10 +65,12 @@ export default class Logger {
 
     const verificationToken = await this.getRequestVerificationToken();
     const data = this.setupLoginFormData(user, verificationToken);
+
     const response = await this.frontService.postRequest(
       data,
       FRONT_API_LOGIN_PAGE || ""
     );
+    console.log("\n\n");
 
     // If login success we should extract all remaining auth tokens
     const scrapper = new Scrapper(response.data);
@@ -116,6 +117,7 @@ export default class Logger {
     }
     const scrapper = new Scrapper(htmlBody);
     const verificationToken = scrapper.extractVerificationToken();
+
     return verificationToken;
   }
 

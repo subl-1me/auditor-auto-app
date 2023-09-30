@@ -12,7 +12,6 @@ import {
   changeLedgerStatus,
   addNewLegder,
 } from "../../utils/reservationUtlis";
-import Ledger from "../../types/Ledger";
 
 const {
   FRONT_API_RSRV_LIST,
@@ -107,7 +106,7 @@ export default class Invoicer {
       // we send departures array in all methods to avoid multiple requests
       case "Invoice all departures":
         invoicerResponse = await this.invoiceAllDepartures(departures);
-        break;
+        return invoicerResponse;
       case "Invoice by room":
         invoicerResponse = await this.invoiceByRoom(departures);
         break;
@@ -162,11 +161,12 @@ export default class Invoicer {
   // }
 
   async invoiceAllDepartures(departures: any): Promise<any> {
-    let pendingToInvoice = [];
+    let pending = [];
+    let errors = [];
     for (let i = 0; i < departures.length; i++) {
       const reservationId = departures[i].reservationId.match(/\d+/)[0];
       console.log(
-        `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room} \n\n`
+        `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room} \n`
       );
       const ledgers = await getReservationLedgerList(reservationId);
       // const emails = await getReservationContact(reservationId);
@@ -175,19 +175,10 @@ export default class Invoicer {
       //TODO: get current ledger
       const currentLedger = ledgers.find((ledger) => ledger.status === "OPEN");
       if (!currentLedger) {
-        throw new Error(
-          "No open ledgers to operate was found. Check reservation status."
-        );
-      }
-
-      if (currentLedger.balance !== 0) {
         console.log(
-          `Current ledger no. ${currentLedger.ledgerNo} balance is ${currentLedger.balance}.\n`
+          "Reservation's status is marked as CHECKOUT. Invoicing proccess will stop.\n\n"
         );
-        console.log(
-          `Reservation room: ${departures[i].room} was marked as pending.`
-        );
-        pendingToInvoice.push(departures[i]);
+        errors.push(departures[i]);
         continue;
       }
 
@@ -197,25 +188,37 @@ export default class Invoicer {
         ledgers.length === 1 ||
         lastLedger.ledgerNo === currentLedger.ledgerNo
       ) {
-        console.log("Openning a new ledger...");
-        const addResponse = await addNewLegder(reservationId);
-        console.log(addResponse);
+        await addNewLegder(reservationId);
       }
 
-      //TODO: set current ledger status to CLOSED
-      console.log(
-        `Changing ledger no. ${currentLedger.ledgerNo} status to closed...`
-      );
-      const changeResponse = await changeLedgerStatus(
-        reservationId,
-        currentLedger.ledgerNo,
-        "CHIN"
-      );
-      console.log(changeResponse);
+      if (currentLedger.balance !== 0) {
+        console.log(`Balance is not 0. Reservation was marked as pending.`);
+        pending.push(departures[i]);
+      } else {
+        //TODO: set current ledger status to CLOSED
+        console.log(`Closing current ledger...`);
+        const changeResponse = await changeLedgerStatus(
+          reservationId,
+          currentLedger.ledgerNo,
+          "CHIN"
+        );
+      }
 
-      //TODO: start invoicer process :)
-      console.log("finalizing");
       console.log("\n\n");
     }
+
+    console.log("PENDING:");
+    console.log(pending);
+    console.log("\n");
+
+    console.log("ERRORS:");
+    console.log(errors);
+    console.log("\n");
+
+    return {
+      status: 200,
+      errors,
+      pending,
+    };
   }
 }

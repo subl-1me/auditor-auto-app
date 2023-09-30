@@ -5,6 +5,7 @@ import TokenStorage from "../utils/TokenStorage";
 import Logger from "./logger/Logger";
 import Noktos from "./noktosProcess/Noktos";
 import Invoicer from "./invoicer/Invoicer";
+import Printer from "./printer/Printer";
 
 export default class OperationManager {
   constructor() {}
@@ -22,7 +23,6 @@ export default class OperationManager {
         if (loggerResponse.status !== 200) {
           return operationResponse;
         }
-
         // if sucess save in local
         await TokenStorage.write(JSON.stringify(loggerResponse.tokens));
         break;
@@ -33,6 +33,11 @@ export default class OperationManager {
       case "Invoicer":
         const invoicer = new Invoicer();
         operationResponse = await invoicer.performInvoicer(menuStack);
+        //TODO: handle saving data, errors and pendings reservations to be invoiced
+        return operationResponse;
+      case "Print docs":
+        const printer = new Printer();
+        operationResponse = await printer.performPrinter(menuStack);
         break;
       default:
         operationResponse = {

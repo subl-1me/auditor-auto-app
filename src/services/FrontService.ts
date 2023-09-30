@@ -2,7 +2,10 @@ import Axios from "axios";
 import { HttpsCookieAgent } from "http-cookie-agent/http";
 import { CookieJar } from "tough-cookie";
 import * as FormData from "form-data";
+import * as fsSync from "fs";
+import fs from "fs/promises";
 import Ledger from "../types/Ledger";
+import path from "path";
 
 export default class FrontService {
   private jar: CookieJar;
@@ -67,6 +70,58 @@ export default class FrontService {
     }
   }
 
+  async downloadByUrl(
+    fileName: string,
+    fileDir: string,
+    authentication: any,
+    endpoint?: string
+  ): Promise<any> {
+    if (!endpoint) {
+      throw new Error("Endpoint cannot be null.");
+    }
+
+    console.log("Downloading reports file...");
+    const response = await this.http({
+      method: "GET",
+      url: endpoint,
+      responseType: "stream",
+      headers: {
+        Authorization: `Bearer ${authentication.bearerToken}`,
+        Cookie:
+          authentication.aspNetTokenCookie +
+          ` mAutSession=${authentication.mAutSession}`,
+      },
+    });
+
+    const stream = response.data;
+    const filePath = path.join(fileDir, fileName);
+
+    if (!fsSync.existsSync(fileDir)) {
+      console.log("Creating docs directory...");
+      await fs.mkdir(fileDir);
+    }
+
+    const fileStream = fsSync.createWriteStream(filePath);
+    stream.pipe(fileStream);
+
+    return new Promise((resolve, reject) => {
+      fileStream.on("finish", () => {
+        resolve({
+          status: 200,
+          message: "Report downloaded successfully",
+          filePath,
+        });
+      });
+
+      fileStream.on("error", (err) => {
+        reject({
+          status: 400,
+          message: err.message,
+        });
+      });
+    });
+  }
+
   /**
    *
    * @param endpoint API URL
@@ -106,7 +161,6 @@ export default class FrontService {
         );
       }
     }
-
     return response.data;
   }
 }

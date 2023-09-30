@@ -1,4 +1,9 @@
 import ReservationSheet from "./types/Ledger";
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config();
+const { FRONT_API_URL } = process.env;
+
 import {
   BalanceAmountPattern,
   InputTokenContainerPattern,
@@ -55,10 +60,31 @@ export default class Scrapper {
     return bearerResult[1];
   }
 
+  extractAudReportUrl(): string | null {
+    const pattern = new RegExp(`<a id="lnkLastRPT" (.*)>(.*)<\/a>`);
+    const match = this.htmlBody.match(pattern);
+
+    if (match) {
+      const result = match[0];
+      const hrefContent = result.match(/href="([^"]*)"/i);
+      if (hrefContent) {
+        const pathSegment = hrefContent[1].slice(2, hrefContent[1].length);
+        const reportPath = path
+          .join(FRONT_API_URL || "null", pathSegment)
+          .replaceAll("&#39", "%27")
+          .replaceAll(";", "");
+
+        return reportPath;
+      }
+    }
+
+    return null;
+  }
+
   extractSystemAppDate(): string {
     const result = this.htmlBody.match(SystemDatePattern);
-    if (!result) return "";
-    return result[0];
+    // console.log(result);
+    return result ? result[0] : "";
   }
 
   // extractDataGridElem(tabNumber: number): string | null {
