@@ -114,7 +114,10 @@ export async function changeLedgerStatus(
   );
 
   if (response.data !== "ok") {
-    throw new Error(`Error changing reservation status: ${response.data}`);
+    return {
+      status: 400,
+      message: `Error trying to change ledger no. ${ledgerNo} status.`,
+    };
   }
 
   return {

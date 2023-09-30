@@ -11,7 +11,7 @@ export default class MenuUtils {
     const menuOperationsNames = [
       "Login",
       "Invoicer",
-      "Print AUD reports",
+      "Print docs",
       "Start Noktos process",
     ];
 
