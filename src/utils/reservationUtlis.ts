@@ -63,6 +63,13 @@ export async function getReservationLedgerList(
   return ledgerList;
 }
 
+export async function addNewPayment(endpoint: string): Promise<any> {
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.getRequest(endpoint, authTokens);
+
+  return response;
+}
+
 export async function getLedgerMovements(ledgerCode: string): Promise<any> {
   if (!FRONT_API_RSRV_FOLIOS_MOVS) {
     throw new Error("FRONT_API_RSRV_FOLIOS endpoint cannot be undefined");
