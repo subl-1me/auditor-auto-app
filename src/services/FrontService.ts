@@ -131,36 +131,41 @@ export default class FrontService {
     endpoint?: string,
     authentication?: any
   ): Promise<string | any[]> {
-    //TODO: Fix this error with Typescript, doesn't recognize
-    // .ENV variables so endpoint must be optional
-    let response;
-    if (authentication) {
-      response = await this.http({
-        method: "GET",
-        url: endpoint,
-        headers: {
-          Authorization: `Bearer ${authentication.bearerToken}`,
-          Cookie:
-            authentication.aspNetTokenCookie +
-            ` mAutSession=${authentication.mAutSession}`,
-        },
-      });
-      const { statusCode } = response.request.res;
-      if (statusCode !== 200) {
-        throw new Error(
-          `Invalid status code at Front Service's response: ${statusCode}`
-        );
-      }
-    } else {
-      response = await this.http.get(endpoint);
-      const { statusCode } = response.request.res;
+    try {
+      //TODO: Fix this error with Typescript, doesn't recognize
+      // .ENV variables so endpoint must be optional
+      let response;
+      if (authentication) {
+        response = await this.http({
+          method: "GET",
+          url: endpoint,
+          headers: {
+            Authorization: `Bearer ${authentication.bearerToken}`,
+            Cookie:
+              authentication.aspNetTokenCookie +
+              ` mAutSession=${authentication.mAutSession}`,
+          },
+        });
+        const { statusCode } = response.request.res;
+        if (statusCode !== 200) {
+          throw new Error(
+            `Invalid status code at Front Service's response: ${statusCode}`
+          );
+        }
+      } else {
+        response = await this.http.get(endpoint);
+        const { statusCode } = response.request.res;
 
-      if (statusCode !== 200) {
-        throw new Error(
-          `Invalid status code at Front Service's response: ${statusCode}`
-        );
+        if (statusCode !== 200) {
+          throw new Error(
+            `Invalid status code at Front Service's response: ${statusCode}`
+          );
+        }
       }
+      return response.data;
+    } catch (err) {
+      // console.log(err);
+      return "FAILED";
     }
-    return response.data;
   }
 }

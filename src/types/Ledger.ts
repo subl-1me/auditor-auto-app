@@ -3,5 +3,5 @@ export default interface Ledger {
   status: string;
   balance: number;
   isBalanceCredit: boolean;
-  movements: [];
+  movements: any[];
 }

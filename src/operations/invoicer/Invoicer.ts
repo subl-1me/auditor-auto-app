@@ -92,6 +92,7 @@ export default class Invoicer {
       FRONT_API_RSRV_LIST || "",
       authTokens
     );
+
     if (response.status !== 200) {
       throw new Error("Error trying to fetch departures.");
     }
@@ -161,7 +162,7 @@ export default class Invoicer {
   // }
 
   async invoiceAllDepartures(departures: any): Promise<any> {
-    let pending = [];
+    let pendingToInvoice = [];
     let errors = [];
     for (let i = 0; i < departures.length; i++) {
       const reservationId = departures[i].reservationId.match(/\d+/)[0];
@@ -172,6 +173,7 @@ export default class Invoicer {
       // const emails = await getReservationContact(reservationId);
       // console.log(ledgers);
       // console.log(emails);
+
       //TODO: get current ledger
       const currentLedger = ledgers.find((ledger) => ledger.status === "OPEN");
       if (!currentLedger) {
@@ -192,8 +194,10 @@ export default class Invoicer {
       }
 
       if (currentLedger.balance !== 0) {
-        console.log(`Balance is not 0. Reservation was marked as pending.`);
-        pending.push(departures[i]);
+        console.log(
+          `Balance is not 0. Reservation was marked as pendingToInvoice.`
+        );
+        pendingToInvoice.push(departures[i]);
       } else {
         //TODO: set current ledger status to CLOSED
         console.log(`Closing current ledger...`);
@@ -207,8 +211,8 @@ export default class Invoicer {
       console.log("\n\n");
     }
 
-    console.log("PENDING:");
-    console.log(pending);
+    console.log("pendingToInvoice:");
+    console.log(pendingToInvoice);
     console.log("\n");
 
     console.log("ERRORS:");
@@ -218,7 +222,7 @@ export default class Invoicer {
     return {
       status: 200,
       errors,
-      pending,
+      pendingToInvoice,
     };
   }
 }
