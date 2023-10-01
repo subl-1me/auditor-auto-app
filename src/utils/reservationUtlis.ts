@@ -1,7 +1,9 @@
 import FrontService from "../services/FrontService";
 import TokenStorage from "./TokenStorage";
 import Scrapper from "../Scrapper";
+
 import Ledger from "../types/Ledger";
+import Payment from "../types/Payment";
 
 const frontService = new FrontService();
 const {
@@ -10,18 +12,20 @@ const {
   FRONT_API_RSRV_CHANGE_LEDGER_STATUS,
   FRONT_API_RSRV_GUEST_INFO,
   FRONT_API_RSRV_ADD_NEW_LEDGER,
+  FRONT_API_RSRV_NEW_PAYMENT,
 } = process.env;
 
 export async function getReservationLedgerList(
   reservationId: string
 ): Promise<Ledger[]> {
+  if (!FRONT_API_RSRV_FOLIOS) {
+    throw new Error("Endpoint cannot be undefined");
+  }
+
   const _FRONT_API_RSRV_FOLIOS = FRONT_API_RSRV_FOLIOS?.replace(
     "{idField}",
     reservationId
   );
-  if (!_FRONT_API_RSRV_FOLIOS) {
-    throw new Error("Invalid API endpoint");
-  }
 
   const authTokens = await TokenStorage.getData();
   const response = await frontService.getRequest(
@@ -63,9 +67,24 @@ export async function getReservationLedgerList(
   return ledgerList;
 }
 
-export async function addNewPayment(endpoint: string): Promise<any> {
+export async function addNewPayment(payment: Payment): Promise<any> {
+  if (!FRONT_API_RSRV_NEW_PAYMENT) {
+    throw new Error("Endpoint cannot be undefined");
+  }
+
+  const _FRONT_API_RSRV_NEW_PAYMENT = FRONT_API_RSRV_NEW_PAYMENT.replace(
+    "{pymntTypeField}",
+    payment.type
+  )
+    .replace("{rsrvIdField}", payment.reservationId)
+    .replace("{rsrvLedgerCodeField}", payment.reservationCode)
+    .replace("{ledgerBalance}", payment.amount.toString());
+
   const authTokens = await TokenStorage.getData();
-  const response = await frontService.getRequest(endpoint, authTokens);
+  const response = await frontService.getRequest(
+    _FRONT_API_RSRV_NEW_PAYMENT,
+    authTokens
+  );
 
   return response;
 }

@@ -3,9 +3,10 @@ import MenuStack from "../../MenuStack";
 import TokenStorage from "../../utils/TokenStorage";
 import FormData from "form-data";
 import { getConfig } from "../../utils/frontSystemUtils";
+
 import Ledger from "../../types/Ledger";
 
-const { FRONT_API_RSRV_LIST, FRONT_API_RSRV_NEW_PAYMENT } = process.env;
+const { FRONT_API_RSRV_LIST } = process.env;
 
 import * as reservationUtils from "../../utils/reservationUtlis";
 
@@ -126,27 +127,14 @@ export default class Noktos {
 
         // add new ledger
         const ledgerAddRes = await reservationUtils.addNewLegder(reservationId);
-        if (!FRONT_API_RSRV_NEW_PAYMENT) {
-          throw new Error("ENDPOINT NOT FOUND");
-        }
-
-        const ledgerString = parseFloat(currentLedger.balance.toString());
-        const _FRONT_API_RSRV_NEW_PAYMENT = FRONT_API_RSRV_NEW_PAYMENT.replace(
-          "{pymntTypeField}",
-          "CPC"
-        )
-          .replace("{rsrvIdField}", reservationId)
-          .replace(
-            "{rsrvLedgerCodeField}",
-            reservationId + "." + currentLedger?.ledgerNo
-          )
-          .replace("{ledgerBalance}", ledgerString.toString());
-
-        const addNewPaymentRes = await reservationUtils.addNewPayment(
-          _FRONT_API_RSRV_NEW_PAYMENT
-        );
 
         // add new payment as CXC with current ledger's balance.
+        const addNewPaymentRes = await reservationUtils.addNewPayment({
+          type: "CPC",
+          amount: currentLedger.balance,
+          reservationId: reservationId,
+          reservationCode: `${reservationId}.${currentLedger.ledgerNo}`,
+        });
 
         // close current ledger
         // start invoicing
@@ -155,38 +143,5 @@ export default class Noktos {
     } catch (err: any) {
       console.log(err.message);
     }
-  }
-
-  async getReservationRate(
-    reservationId: string,
-    authTokens: any
-  ): Promise<void> {
-    const configData = await getConfig();
-    const frontAppDate = configData.appDate;
-    const data = this.setupSearchFormData(
-      reservationId,
-      authTokens.verificationToken,
-      frontAppDate
-    );
-  }
-
-  async setupSearchFormData(
-    reservationId: string,
-    verificationToken: string,
-    frontAppDate: string
-  ): Promise<FormData> {
-    const formData = new FormData();
-    formData.append("_hdn001", "KFwHWn911eaVeJhL++adWg==");
-    formData.append("_hdn002", "false");
-    formData.append("_hdn003", "KFwHWn911eaVeJhL++adWg==");
-    formData.append("_hdnPropName", "City+Express+Ciudad+Juarez");
-    formData.append("_hdnRoleName", "RecepcionT");
-    formData.append("_hdnOffset", "-6");
-    formData.append("_hdnAppDate", frontAppDate);
-    formData.append("_hdnMessage", "");
-    formData.append("_hdnIdiom", "Spa");
-    formData.append("_hdnRSRV", reservationId);
-    formData.append("__RequestVerificationToken", verificationToken);
-    return formData;
   }
 }
