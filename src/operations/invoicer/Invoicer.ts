@@ -114,6 +114,8 @@ export default class Invoicer {
       default:
         break;
     }
+
+    return invoicerResponse;
   }
 
   async invoiceByRoom(departures: any): Promise<any> {

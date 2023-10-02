@@ -17,31 +17,34 @@ export default class Printer {
     this.frontService = new FrontService();
   }
 
-  async performPrinter(menuStack: MenuStack): Promise<void> {
+  async performPrinter(menuStack: MenuStack): Promise<any> {
     menuStack.push(new PrinterMenu());
     const printerMenu = menuStack.peek();
 
-    const docsSelection = await printerMenu.display();
-    if (docsSelection === "Return") {
-      menuStack.pop();
-      return;
-    }
-
     let printerResponse;
-    switch (docsSelection) {
-      case "AUD":
-        const reportsData = await this.getAudReports();
-        const printerResponse = await this.printDocs(reportsData.filesFolder);
+    do {
+      const docsSelection = await printerMenu.display();
+      if (docsSelection === "Return") {
+        menuStack.pop();
         break;
-    }
+      }
+
+      switch (docsSelection) {
+        case "AUD":
+          const reportsData = await this.getAudReports();
+          printerResponse = await this.printDocs(reportsData.filesFolder);
+          break;
+      }
+    } while (true);
+
     return printerResponse;
   }
 
   async printDocs(filesDir: string): Promise<any> {
     const users = Object.getOwnPropertyNames(reportsByUser);
     for (const user of users) {
-      const userDocs = reportsByUser[user as keyof typeof reportsByUser];
-      for (const doc of userDocs) {
+      const docs = reportsByUser[user as keyof typeof reportsByUser];
+      for (const doc of docs) {
         let filePath = path.join(filesDir, doc + ".pdf");
         console.log("Printing: ", filePath);
         await print(filePath, {
@@ -51,6 +54,11 @@ export default class Printer {
         });
       }
     }
+
+    return {
+      status: 200,
+      message: "Docs were printed succesfully.",
+    };
   }
 
   async getAudReports(): Promise<any> {

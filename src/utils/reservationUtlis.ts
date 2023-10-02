@@ -72,6 +72,10 @@ export async function addNewPayment(payment: Payment): Promise<any> {
     throw new Error("Endpoint cannot be undefined");
   }
 
+  if (payment.amount === 0) {
+    throw new Error("Payment amount cannot be 0");
+  }
+
   const _FRONT_API_RSRV_NEW_PAYMENT = FRONT_API_RSRV_NEW_PAYMENT.replace(
     "{pymntTypeField}",
     payment.type

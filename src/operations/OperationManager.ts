@@ -10,10 +10,7 @@ import Printer from "./printer/Printer";
 export default class OperationManager {
   constructor() {}
 
-  async handleOperation(
-    operation: string,
-    menuStack: MenuStack
-  ): Promise<void> {
+  async handleOperation(operation: string, menuStack: MenuStack): Promise<any> {
     let operationResponse;
     switch (operation) {
       case "Login":

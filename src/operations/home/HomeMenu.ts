@@ -16,7 +16,7 @@ export default class Home {
           "Login",
           "Invoicer",
           "Print docs",
-          "Start Noktos process",
+          // "Start Noktos process",
           new inquirer.Separator(),
           "Exit",
         ],

@@ -15,4 +15,8 @@ export default class MenuStack {
   peek(): any {
     return this.stack[this.stack.length - 1];
   }
+
+  isEmpty(): boolean {
+    return this.stack.length === 0;
+  }
 }

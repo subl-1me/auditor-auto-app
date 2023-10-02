@@ -5,7 +5,7 @@ import MessageDisplayer from "./messageDisplayer";
 export default class MenuUtils {
   constructor(private menuStack: MenuStack) {}
 
-  async processUserChoice(choice: any): Promise<void> {
+  async processUserChoice(choice: any): Promise<any> {
     const messageDisplayer = new MessageDisplayer();
     //TODO: implement if choice is a submenu
     const menuOperationsNames = [
@@ -17,18 +17,23 @@ export default class MenuUtils {
 
     const prop = Object.getOwnPropertyNames(choice).shift();
     if (!prop) {
-      throw new Error("Menu error: menu selection cannot be undefined");
+      throw new Error("Menu error: invalid input.");
     }
     const selection = choice[prop];
+
+    let operationResponse;
     if (menuOperationsNames.includes(selection)) {
       const operationManager = new OperationManager();
       // perform operations
-      const opResposne = await operationManager.handleOperation(
+      const opResponse = await operationManager.handleOperation(
         selection,
         this.menuStack
       );
-      messageDisplayer.display(opResposne);
+      messageDisplayer.display(opResponse);
+      operationResponse = opResponse;
     }
+
+    return operationResponse;
     //TODO: implement submenus
   }
 }

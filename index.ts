@@ -15,12 +15,25 @@ async function main(): Promise<void> {
     const userChoice = await currentMenu.display();
     if (userChoice === "Exit") {
       menuStack.pop();
+      console.log("exiting...");
       break;
     }
-    const result = await menuUtils.processUserChoice(userChoice);
+
+    const userProccecedChoice = await menuUtils.processUserChoice(userChoice);
+
+    // if (userChoice === "Return") {
+    //   menuStack.pop();
+    //   console.log("returning...");
+    // } else {
+    //   // case user chose another option or return action
+    //   const userProccecedChoice = await menuUtils.processUserChoice(userChoice);
+    //   console.log(userProccecedChoice);
+    //   if (userProccecedChoice === "Return" && !menuStack.isEmpty()) {
+    //     menuStack.pop();
+    //   }
+    // }
   } while (true);
 
-  console.log("App is closing with 0 errors...");
   return;
 }
 

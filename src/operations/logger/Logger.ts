@@ -94,6 +94,7 @@ export default class Logger {
       menuStack.pop();
       return {
         status: 200,
+        message: "Logged successfully",
         tokens: {
           mAutSession,
           verificationToken,
