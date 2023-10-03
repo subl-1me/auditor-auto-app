@@ -9,4 +9,18 @@ describe("Invoicer tests suit", async function () {
   it("Should close current reservation's sheet", () => {
     // const response = invoicer.closeCurrentSheet(MockData.sheets);
   });
+
+  // it("Should get RFC data to invoice", async function (done) {
+  //   const response = await invoicer.searchForRFC("ALEXIS PIEDRA");
+  //   const { Items } = response.data.d;
+  //   const reqItem = Items.pop();
+  //   const itemValue = reqItem.Value;
+  //   console.log(itemValue);
+  // });
+
+  it("Should get RFC info", async function () {
+    // search for whole RFC data
+    const rfcInfo = await invoicer.recoverRFCInfo("783754");
+    console.log();
+  });
 });
