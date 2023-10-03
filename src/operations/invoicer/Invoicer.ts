@@ -12,12 +12,22 @@ import {
   changeLedgerStatus,
   addNewLegder,
 } from "../../utils/reservationUtlis";
+import Ledger from "../../types/Ledger";
 
 const {
   FRONT_API_RSRV_LIST,
   FRONT_API_RSRV_FOLIOS,
   FRONT_API_RSRV_ADD_NEW_LEDGER,
+  FRONT_API_SEARCH_RFC,
+  FRONT_API_RFC_INFO,
 } = process.env;
+
+const RFCList = [
+  {
+    generic: "43",
+    name: "Generico",
+  },
+];
 
 export default class Invoicer {
   private frontService: FrontService;
@@ -151,17 +161,72 @@ export default class Invoicer {
     );
 
     const reservationId = reservation.reservationId.match(/\d+/)[0];
-    const sheets = await getReservationLedgerList(reservationId);
-    const emails = await getReservationContact(reservationId);
-    console.log(sheets);
-    console.log(emails);
-    // await this.closeCurrentSheet(sheets);
+
+    const ledgers = await getReservationLedgerList(reservationId);
+    const currentLedger = ledgers.find((ledger) => {
+      ledger.status === "OPEN";
+    });
   }
 
   // private async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
   //   const currentSheet = sheets.find((sheet) => sheet.isOpen);
   //   console.log(currentSheet);
   // }
+
+  async searchForRFC(RFC: string): Promise<any> {
+    if (!FRONT_API_SEARCH_RFC) {
+      throw new Error("API endpoint cannot be undefined");
+    }
+
+    // const question = [
+    //   {
+    //     type: "input",
+    //     name: "RFC",
+    //     message: "Type RFC code:",
+    //   },
+    // ];
+
+    // const answer = await inquirer.prompt(question);
+
+    const data = {
+      context: {
+        Text: RFC,
+        NumberOfItems: 0,
+        PropCode: "CECJS",
+        TargetFolio: "20418163.",
+        FiscalID: "",
+        RAnticipo: "",
+      },
+    };
+
+    const authTokens = await TokenStorage.getData();
+    const response = await this.frontService.postRequest(
+      data,
+      FRONT_API_SEARCH_RFC,
+      authTokens
+    );
+
+    return response;
+  }
+
+  async recoverRFCInfo(rfcId: string) {
+    if (!FRONT_API_RFC_INFO) {
+      throw new Error("Endpont cannot be undefined");
+    }
+
+    const authTokens = TokenStorage.getData();
+    const response = await this.frontService.postRequest(
+      {
+        pReceptor_id: rfcId,
+      },
+      FRONT_API_RFC_INFO,
+      authTokens
+    );
+
+    return response.data;
+  }
+
+  async createInvoice(departure: any, currentLedger: Ledger): Promise<any> {}
 
   async invoiceAllDepartures(departures: any): Promise<any> {
     let pendingToInvoice = [];
@@ -180,7 +245,7 @@ export default class Invoicer {
       const currentLedger = ledgers.find((ledger) => ledger.status === "OPEN");
       if (!currentLedger) {
         console.log(
-          "Reservation's status is marked as CHECKOUT. Invoicing proccess will stop.\n\n"
+          "Reservation's status is marked as CHECKOUT. Invoicing proccess will stop.\n"
         );
         errors.push(departures[i]);
         continue;
@@ -196,9 +261,7 @@ export default class Invoicer {
       }
 
       if (currentLedger.balance !== 0) {
-        console.log(
-          `Balance is not 0. Reservation was marked as pendingToInvoice.`
-        );
+        console.log(`Balance is not 0. Reservation was marked as pending.`);
         pendingToInvoice.push(departures[i]);
       } else {
         //TODO: set current ledger status to CLOSED
@@ -208,6 +271,8 @@ export default class Invoicer {
           currentLedger.ledgerNo,
           "CHIN"
         );
+
+        // continue invoicer proccess
       }
 
       console.log("\n\n");

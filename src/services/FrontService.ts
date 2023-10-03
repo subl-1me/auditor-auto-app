@@ -28,7 +28,7 @@ export default class FrontService {
    * @param {string} endpoint API URL
    */
   async postRequest(
-    formData: FormData | Object,
+    formData: FormData | Object | JSON,
     endpoint: string,
     authentication?: any
   ): Promise<any> {
@@ -45,6 +45,7 @@ export default class FrontService {
           data: formData,
           headers: {
             Authorization: `Bearer ${authentication.bearerToken}`,
+            "X-AjaxPro-Method": "GetReceptorData",
             Cookie:
               authentication.aspNetTokenCookie +
               ` mAutSession=${authentication.mAutSession}`,
@@ -64,8 +65,10 @@ export default class FrontService {
           `Invalid status code attemping to login: ${statusCode}.`
         );
       }
+
       return response;
     } catch (err: any) {
+      console.log(err);
       throw new Error(err.message);
     }
   }

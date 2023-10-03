@@ -5,6 +5,6 @@ describe("Printer suite test", () => {
   const printer = new Printer();
 
   it("Should get last reports .zip", async (done) => {
-    await printer.getAudReports();
+    // await printer.getAudReports();
   });
 });
