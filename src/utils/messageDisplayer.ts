@@ -2,7 +2,6 @@ export default class MessageDisplayer {
   constructor() {}
 
   display(response: any): void {
-    console.clear();
     if (response.status === 200) {
       console.log(`\u001b[32m ${response.message} \n`);
     }

@@ -8,7 +8,9 @@ import Ledger from "../../types/Ledger";
 
 const { FRONT_API_RSRV_LIST } = process.env;
 
+import { IN_HOUSE_FILTER } from "../../consts";
 import * as reservationUtils from "../../utils/reservationUtlis";
+import Reservation from "../../types/Reservation";
 
 export default class Noktos {
   private frontService: FrontService;
@@ -24,78 +26,20 @@ export default class Noktos {
       // & make sure there are 15 room charges.
       //TODO: Finally make the invoice via Invoicer
 
-      const data = {
-        pc: "KFwHWn911eaVeJhL++adWg==",
-        ph: false,
-        pn: "",
-        ci: "",
-        gpi: "",
-        ti: "",
-        rc: "",
-        rm: "",
-        fm: "",
-        to: "",
-        fq: "",
-        rs: "",
-        st: "LS",
-        grp: "",
-        gs: "CHOUT,CHIN,NOSHOW,POST",
-        sidx: "NameGuest",
-        sord: "asc",
-        rows: 100,
-        page: 1,
-        ss: false,
-        rcss: "",
-        user: "HTJUGALDEA",
-      };
-
-      // const data = {
-      //   pc: "KFwHWn911eaVeJhL++adWg==",
-      //   ph: false,
-      //   pn: "",
-      //   ci: "",
-      //   gpi: "",
-      //   ti: "",
-      //   rc: "",
-      //   rm: "",
-      //   fm: "",
-      //   to: "",
-      //   fq: "",
-      //   rs: "CHIN,NOSHOW,POST",
-      //   st: "EC",
-      //   grp: "",
-      //   gs: "",
-      //   sidx: "NameGuest",
-      //   sord: "asc",
-      //   rows: 100,
-      //   page: 1,
-      //   ss: false,
-      //   rcss: "",
-      //   user: "HTJUGALDEA",
-      // };
-      const authTokens = await TokenStorage.getData();
-      const response = await this.frontService.postRequest(
-        data,
-        FRONT_API_RSRV_LIST || "",
-        authTokens
+      const reservations = await reservationUtils.getReservationList(
+        IN_HOUSE_FILTER
       );
-
-      const reservations: any[] = response.data.rows;
-      const sortRsrvByRoomNumber = (rsrvA: any, rsrvB: any) => {
-        return rsrvA.room - rsrvB.room;
-      };
       const noktosReservations = reservations
         .filter((reservation) => reservation.company === "NOKTOS-C")
-        .filter((reservation) => reservation.dateOut === "2023/09/30")
-        .sort(sortRsrvByRoomNumber);
+        .filter((reservation) => reservation.dateOut === "2023/09/30"); //TODO: implement current system date once AUD was completed
 
-      let pendings: any = [];
+      let pendings: Reservation[] = [];
+      let errors: any[] = [];
       for (const reservation of noktosReservations) {
-        console.log(`GUEST: ${reservation.nameGuest} - ${reservation.room}`);
+        console.log(`GUEST: ${reservation.guestName} - ${reservation.room}`);
         // Get all reservation ledgers
-        const reservationId = reservation.reservationId.match(/\d+/)[0];
         const ledgers = await reservationUtils.getReservationLedgerList(
-          reservationId
+          reservation.id
         );
         const currentLedger = ledgers.find(
           (ledger) => ledger.status === "OPEN"
@@ -126,16 +70,24 @@ export default class Noktos {
         console.log(`Total room charges: ${roomCharges?.length} \n`);
 
         // add new ledger
-        const ledgerAddRes = await reservationUtils.addNewLegder(reservationId);
+        const ledgerAddRes = await reservationUtils.addNewLegder(
+          reservation.id
+        );
 
         // add new payment as CXC with current ledger's balance.
         const addNewPaymentRes = await reservationUtils.addNewPayment({
           type: "CPC",
           amount: currentLedger.balance,
-          reservationId: reservationId,
-          reservationCode: `${reservationId}.${currentLedger.ledgerNo}`,
+          reservationId: reservation.id,
+          reservationCode: `${reservation.id}.${currentLedger.ledgerNo}`,
         });
 
+        if (addNewPaymentRes.status !== 200) {
+          errors.push({
+            message: addNewPaymentRes.message,
+            ...reservation,
+          });
+        }
         // close current ledger
         // start invoicing
         // print invoice

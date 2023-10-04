@@ -4,6 +4,9 @@ import Scrapper from "../Scrapper";
 
 import Ledger from "../types/Ledger";
 import Payment from "../types/Payment";
+import Reservation from "../types/Reservation";
+
+import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../consts";
 
 const frontService = new FrontService();
 const {
@@ -13,6 +16,8 @@ const {
   FRONT_API_RSRV_GUEST_INFO,
   FRONT_API_RSRV_ADD_NEW_LEDGER,
   FRONT_API_RSRV_NEW_PAYMENT,
+  FRONT_API_RSRV_INVOICES,
+  FRONT_API_RSRV_LIST,
 } = process.env;
 
 export async function getReservationLedgerList(
@@ -67,13 +72,126 @@ export async function getReservationLedgerList(
   return ledgerList;
 }
 
+/**
+ * @description Gets reservation list by following a status filter.
+ * @param {string} status Condition to fetch list of reservation. See consts file to see usable filters.
+ * @returns {Reservation}
+ */
+export async function getReservationList(
+  status: string
+): Promise<Reservation[]> {
+  const listOptions = {
+    pc: "KFwHWn911eaVeJhL++adWg==",
+    ph: false,
+    pn: "",
+    ci: "",
+    gpi: "",
+    ti: "",
+    rc: "",
+    rm: "",
+    fm: "",
+    to: "",
+    fq: "",
+    rs: status === IN_HOUSE_FILTER ? "CHIN,NOSHOW" : "",
+    st: status === DEPARTURES_FILTER ? "LS" : "EC",
+    grp: "",
+    gs: status === DEPARTURES_FILTER ? "CHOUT,CHIN,NOSHOW" : "",
+    sidx: "NameGuest",
+    sord: "asc",
+    rows: 100,
+    page: 1,
+    ss: false,
+    rcss: "",
+    user: "HTJUGALDEA",
+  };
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.postRequest(
+    listOptions,
+    FRONT_API_RSRV_LIST || "",
+    authTokens
+  );
+
+  // sort by room
+  const items = response.data.rows;
+  const sortRsrvByRoomNumber = (rsrvA: any, rsrvB: any) => {
+    return rsrvA.room - rsrvB.room;
+  };
+
+  // map response items to Reservation interface
+  const reservations: Reservation[] = items
+    .map((item: any) => {
+      const rsrvId = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
+      const reservation: Reservation = {
+        id: rsrvId, // in this use case id must be an string because of API's requirements
+        guestName: item.nameGuest,
+        room: item.room,
+        dateIn: item.dateIn,
+        dateOut: item.dateOut,
+        status: item.statusGuest,
+        company: item.company,
+        agency: item.agency,
+      };
+
+      return reservation;
+    })
+    .sort(sortRsrvByRoomNumber);
+  return reservations;
+}
+
+export async function getReservationInvoiceList(
+  reservation: Reservation
+): Promise<any> {
+  if (!FRONT_API_RSRV_INVOICES) {
+    throw new Error("Endpoint cannot be undefined");
+  }
+
+  const _FRONT_API_RSRV_INVOICES = FRONT_API_RSRV_INVOICES.replace(
+    "{rsrvIdField}",
+    reservation.id
+  ).replace("{rsrvStatusField}", reservation.status);
+
+  const authTokens = await TokenStorage.getData();
+  if (!authTokens) {
+    throw new Error("Error trying to get authentication tokens.");
+  }
+  const response = await frontService.getRequest(
+    _FRONT_API_RSRV_INVOICES,
+    authTokens
+  );
+
+  const invoicesTableHTMLElemPattern = new RegExp(
+    `<table cellspacing="0" cellpadding="0" width="100%" border="0">([\\s\\S\\t.]*)<\/table>`,
+    "i"
+  );
+  const match = response.toString().match(invoicesTableHTMLElemPattern);
+  if (match) {
+    const invoiceTableDataHTMLElemPattern = new RegExp(
+      `<td width="90%" valign="top" class="esquinas" style="border: 1px solid #CEECF5">([\\s\\S\\t.]*)<\/td>`,
+      "g"
+    );
+    console.log(match[0]);
+    const match2 = match[0].match(invoiceTableDataHTMLElemPattern);
+    if (match2) {
+      const idPattern = /\d+\.\d+/;
+      console.log(match2.length);
+      // match2.forEach((result) => {
+      //   console.log(result.match(idPattern)[0]);
+      // });
+    }
+  }
+}
+
 export async function addNewPayment(payment: Payment): Promise<any> {
   if (!FRONT_API_RSRV_NEW_PAYMENT) {
     throw new Error("Endpoint cannot be undefined");
   }
 
   if (payment.amount === 0) {
-    throw new Error("Payment amount cannot be 0");
+    return {
+      status: 400,
+      message: "Payment amount cannot be 0",
+    };
   }
 
   const _FRONT_API_RSRV_NEW_PAYMENT = FRONT_API_RSRV_NEW_PAYMENT.replace(

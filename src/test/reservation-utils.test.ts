@@ -1,8 +1,12 @@
 import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import Scrapper from "../Scrapper";
-import { changeLedgerStatus } from "../utils/reservationUtlis";
+import {
+  changeLedgerStatus,
+  getReservationInvoiceList,
+} from "../utils/reservationUtlis";
 import MockData from "./mock/mock-data";
+import Reservation from "../types/Reservation";
 
 describe("Reservation-utils test suite", async () => {
   // it("Should change reservation ledge status", async (done) => {
@@ -25,4 +29,19 @@ describe("Reservation-utils test suite", async () => {
   //   const emails = scrapperGuestField.extractContactEmails();
   //   console.log(emails);
   // });
+
+  it("Should get HTML response", async function () {
+    const mock: Reservation = {
+      id: "20397262",
+      room: 124,
+      guestName: "",
+      status: "CHIN",
+      company: "",
+      agency: "",
+      dateIn: "",
+      dateOut: "",
+    };
+    const result = await getReservationInvoiceList(mock);
+    expect(true).to.equal(true);
+  });
 });
