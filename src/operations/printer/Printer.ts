@@ -5,8 +5,7 @@ import PrinterMenu from "./PrinterMenu";
 import Scrapper from "../../Scrapper";
 import decompress from "decompress";
 import path from "path";
-import fs from "fs";
-import { reportsByUser } from "../../utils/reportsUtils";
+import { reportsByUser } from "../../consts";
 import { print } from "pdf-to-printer";
 
 const { FRONT_API_LOAD_LAST_REPORTS } = process.env;

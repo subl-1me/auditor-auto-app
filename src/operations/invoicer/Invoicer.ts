@@ -4,15 +4,20 @@ import FrontService from "../../services/FrontService";
 import TokenStorage from "../../utils/TokenStorage";
 import inquirer from "inquirer";
 
+import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../../consts";
+
 // shared utils
 import {
   getReservationLedgerList,
   getLedgerMovements,
   getReservationContact,
+  getReservationList,
   changeLedgerStatus,
   addNewLegder,
 } from "../../utils/reservationUtlis";
+
 import Ledger from "../../types/Ledger";
+import Reservation from "../../types/Reservation";
 
 const {
   FRONT_API_RSRV_LIST,
@@ -45,72 +50,10 @@ export default class Invoicer {
       return { status: 200 };
     }
 
-    // A list of filters to use while fetching for departures list
-    const listOptions = {
-      pc: "KFwHWn911eaVeJhL++adWg==",
-      ph: false,
-      pn: "",
-      ci: "",
-      gpi: "",
-      ti: "",
-      rc: "",
-      rm: "",
-      fm: "",
-      to: "",
-      fq: "",
-      rs: "",
-      st: "LS",
-      grp: "",
-      gs: "CHOUT,CHIN,NOSHOW,POST",
-      sidx: "NameGuest",
-      sord: "asc",
-      rows: 100,
-      page: 1,
-      ss: false,
-      rcss: "",
-      user: "HTJUGALDEA",
-    };
-
-    // const listOptions = {
-    //   pc: "KFwHWn911eaVeJhL++adWg==",
-    //   ph: false,
-    //   pn: "",
-    //   ci: "",
-    //   gpi: "",
-    //   ti: "",
-    //   rc: "",
-    //   rm: "",
-    //   fm: "",
-    //   to: "",
-    //   fq: "",
-    //   rs: "CHIN,NOSHOW,POST",
-    //   st: "EC",
-    //   grp: "",
-    //   gs: "",
-    //   sidx: "NameGuest",
-    //   sord: "asc",
-    //   rows: 100,
-    //   page: 1,
-    //   ss: false,
-    //   rcss: "",
-    //   user: "HTJUGALDEA",
-    // };
-
-    const authTokens = await TokenStorage.getData();
-    const response = await this.frontService.postRequest(
-      listOptions,
-      FRONT_API_RSRV_LIST || "",
-      authTokens
-    );
-
-    if (response.status !== 200) {
-      throw new Error("Error trying to fetch departures.");
+    const departures = await getReservationList(DEPARTURES_FILTER);
+    if (departures.length === 0) {
+      throw new Error("Departures list is empty.");
     }
-
-    const sortRsrvByRoomNumber = (rsrvA: any, rsrvB: any) => {
-      return rsrvA.room - rsrvB.room;
-    };
-    const departures = response.data.rows.sort(sortRsrvByRoomNumber);
 
     let invoicerResponse;
     switch (invoicerSelection) {
@@ -128,7 +71,7 @@ export default class Invoicer {
     return invoicerResponse;
   }
 
-  async invoiceByRoom(departures: any): Promise<any> {
+  async invoiceByRoom(departures: Reservation[]): Promise<any> {
     // ask for room number
     const request = [
       {
@@ -138,13 +81,23 @@ export default class Invoicer {
       },
     ];
 
-    let reservation;
+    let reservation: Reservation = {
+      id: "",
+      guestName: "",
+      company: "",
+      agency: "",
+      room: 0,
+      dateIn: "",
+      dateOut: "",
+      status: "",
+    };
+
     do {
       const answer = await inquirer.prompt(request);
       const roomNumber = answer["room-number"];
 
       const _reservation = departures.find(
-        (reservation: any) => reservation.room === roomNumber
+        (reservation: Reservation) => reservation.room === roomNumber
       );
 
       if (!_reservation) {
@@ -153,16 +106,14 @@ export default class Invoicer {
       } else {
         reservation = _reservation;
       }
-    } while (!reservation);
+    } while (reservation.id === "");
 
     console.clear();
     console.log(
-      `Currently invoicing: \n${reservation.nameGuest} - ${reservation.room}\n`
+      `Currently invoicing: \n${reservation.guestName} - ${reservation.room}\n`
     );
 
-    const reservationId = reservation.reservationId.match(/\d+/)[0];
-
-    const ledgers = await getReservationLedgerList(reservationId);
+    const ledgers = await getReservationLedgerList(reservation.id);
     const currentLedger = ledgers.find((ledger) => {
       ledger.status === "OPEN";
     });
@@ -226,17 +177,19 @@ export default class Invoicer {
     return response.data;
   }
 
-  async createInvoice(departure: any, currentLedger: Ledger): Promise<any> {}
+  async createInvoice(
+    departure: Reservation,
+    currentLedger: Ledger
+  ): Promise<any> {}
 
-  async invoiceAllDepartures(departures: any): Promise<any> {
+  async invoiceAllDepartures(departures: Reservation[]): Promise<any> {
     let pendingToInvoice = [];
     let errors = [];
     for (let i = 0; i < departures.length; i++) {
-      const reservationId = departures[i].reservationId.match(/\d+/)[0];
       console.log(
-        `PROCESSING: ${departures[i].nameGuest} - ${departures[i].room} \n`
+        `PROCESSING: ${departures[i].guestName} - ${departures[i].room} \n`
       );
-      const ledgers = await getReservationLedgerList(reservationId);
+      const ledgers = await getReservationLedgerList(departures[i].id);
       // const emails = await getReservationContact(reservationId);
       // console.log(ledgers);
       // console.log(emails);
@@ -257,7 +210,7 @@ export default class Invoicer {
         ledgers.length === 1 ||
         lastLedger.ledgerNo === currentLedger.ledgerNo
       ) {
-        await addNewLegder(reservationId);
+        await addNewLegder(departures[i].id);
       }
 
       if (currentLedger.balance !== 0) {
@@ -267,9 +220,9 @@ export default class Invoicer {
         //TODO: set current ledger status to CLOSED
         console.log(`Closing current ledger...`);
         const changeResponse = await changeLedgerStatus(
-          reservationId,
+          departures[i].id,
           currentLedger.ledgerNo,
-          "CHIN"
+          departures[i].status
         );
 
         // continue invoicer proccess

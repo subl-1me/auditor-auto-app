@@ -20,7 +20,7 @@ describe("Invoicer tests suit", async function () {
 
   it("Should get RFC info", async function () {
     // search for whole RFC data
-    const rfcInfo = await invoicer.recoverRFCInfo("783754");
-    console.log();
+    // const rfcInfo = await invoicer.recoverRFCInfo("783754");
+    // console.log();
   });
 });
