@@ -32,8 +32,8 @@ describe("Reservation-utils test suite", async () => {
 
   it("Should get HTML response", async function () {
     const mock: Reservation = {
-      id: "20397262",
-      room: 124,
+      id: " 20452558",
+      room: 621,
       guestName: "",
       status: "CHIN",
       company: "",
@@ -42,6 +42,7 @@ describe("Reservation-utils test suite", async () => {
       dateOut: "",
     };
     const result = await getReservationInvoiceList(mock);
+    // console.log(result);
     expect(true).to.equal(true);
   });
 });

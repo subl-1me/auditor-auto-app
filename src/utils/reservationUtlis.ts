@@ -4,9 +4,21 @@ import Scrapper from "../Scrapper";
 
 import Ledger from "../types/Ledger";
 import Payment from "../types/Payment";
+import Invoice from "../types/Invoice";
 import Reservation from "../types/Reservation";
 
-import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../consts";
+import {
+  DEPARTURES_FILTER,
+  IN_HOUSE_FILTER,
+  PRE_INVOICED,
+  INVOICED,
+} from "../consts";
+
+import {
+  invoiceEventHTMLElemPattern,
+  invoiceReceptorRFCPattern,
+  invoiceReceptorNamePattern,
+} from "../patterns";
 
 const frontService = new FrontService();
 const {
@@ -141,7 +153,7 @@ export async function getReservationList(
 
 export async function getReservationInvoiceList(
   reservation: Reservation
-): Promise<any> {
+): Promise<Invoice[]> {
   if (!FRONT_API_RSRV_INVOICES) {
     throw new Error("Endpoint cannot be undefined");
   }
@@ -164,22 +176,61 @@ export async function getReservationInvoiceList(
     `<table cellspacing="0" cellpadding="0" width="100%" border="0">([\\s\\S\\t.]*)<\/table>`,
     "i"
   );
-  const match = response.toString().match(invoicesTableHTMLElemPattern);
-  if (match) {
-    const invoiceTableDataHTMLElemPattern = new RegExp(
-      `<td width="90%" valign="top" class="esquinas" style="border: 1px solid #CEECF5">([\\s\\S\\t.]*)<\/td>`,
-      "g"
+  const invoicesTableMatch = response
+    .toString()
+    .match(invoicesTableHTMLElemPattern);
+  if (!invoicesTableMatch) {
+    throw new Error(
+      "Error trying to read main invoices table. Try login again."
     );
-    console.log(match[0]);
-    const match2 = match[0].match(invoiceTableDataHTMLElemPattern);
-    if (match2) {
-      const idPattern = /\d+\.\d+/;
-      console.log(match2.length);
-      // match2.forEach((result) => {
-      //   console.log(result.match(idPattern)[0]);
-      // });
-    }
   }
+
+  const invoiceEventMatch = invoicesTableMatch[0].match(
+    invoiceEventHTMLElemPattern
+  );
+  if (!invoiceEventMatch || invoiceEventMatch.length === 0) {
+    return [];
+  }
+
+  let invoices: Invoice[] = [];
+  invoiceEventMatch.forEach((result: string) => {
+    const eventNoMatch = result.match(/\d+/);
+
+    const invoiceReceptorMatch = invoicesTableMatch[0].match(
+      invoiceReceptorRFCPattern
+    );
+
+    const eventNo = eventNoMatch ? eventNoMatch[0] : 0;
+    const receptorRFC = invoiceReceptorMatch ? invoiceReceptorMatch[0] : "";
+
+    let ledgerNo = 0;
+    let status = "";
+    let RFC = "";
+    let RFCName = "";
+    if (eventNo !== 0) {
+      // it match with a ledger number
+      ledgerNo = Number(eventNo);
+      status = result.includes(INVOICED) ? INVOICED : PRE_INVOICED;
+    }
+
+    if (receptorRFC) {
+      const rfcResult = receptorRFC.match(/[A-Z]{3}\d{6}[A-Z]{2}\d/);
+      RFC = rfcResult ? rfcResult[0] : "";
+    }
+
+    const receptorRFCNameResult = invoicesTableMatch[0].match(
+      invoiceReceptorNamePattern
+    );
+    const receptorRFCName = receptorRFCNameResult
+      ? receptorRFCNameResult[0]
+      : null;
+    console.log(receptorRFCName);
+    // if (receptorRFCName) {
+    // }
+  });
+
+  console.log(invoices);
+  return invoices;
 }
 
 export async function addNewPayment(payment: Payment): Promise<any> {
