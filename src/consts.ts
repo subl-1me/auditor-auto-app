@@ -2,6 +2,11 @@
 export const DEPARTURES_FILTER = "departures";
 export const IN_HOUSE_FILTER = "in-house";
 
+// invoice status
+// it is on spanish because the API's language is spanish
+export const INVOICED = "Timbrado";
+export const PRE_INVOICED = "PreFactura";
+
 // printer guides
 export const reportsByUser = {
   accountant: [

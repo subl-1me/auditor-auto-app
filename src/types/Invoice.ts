@@ -1,5 +1,6 @@
-export interface Invoice {
-  rfc: string;
-  name: string;
-  amount: number;
+export default interface Invoice {
+  ledgerNo: number;
+  RFC: string;
+  RFCName: string;
+  status: string;
 }
