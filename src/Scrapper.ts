@@ -1,11 +1,9 @@
-import ReservationSheet from "./types/Ledger";
 import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
 const { FRONT_API_URL } = process.env;
 
 import {
-  BalanceAmountPattern,
   InputTokenContainerPattern,
   BearerVarDeclarationPattern,
   BearerValuePattern,
@@ -41,6 +39,37 @@ export default class Scrapper {
 
     const cleanToken = token.replace(bannedCharactersPattern, "");
     return cleanToken;
+  }
+
+  extractCertificateId(): string | null {
+    let certificate = null;
+    const certificateElementPattern = new RegExp(
+      `<label id="sCertificated"([\\s\\S\\t.]*?)>(.*)<\/label>`
+    );
+
+    const certificateMatch = this.htmlBody.match(certificateElementPattern);
+    if (certificateMatch) {
+      let elemResult = certificateMatch[0].match(/\d+/);
+      certificate = elemResult ? elemResult[0] : null;
+    }
+
+    return certificate;
+  }
+
+  extractRoutings(): any[] {
+    let routings: any = [];
+    const varName = "itemArray";
+    const itemsPattern = new RegExp(`\\b${varName}\\s*=\\s*"(.*?)"`);
+    const itemMatch = this.htmlBody.match(itemsPattern);
+    if (!itemMatch) {
+      return routings;
+    }
+
+    // console.log(this.htmlBody);
+    const itemArrayParsed = itemMatch[1].replace(/\\u0022/g, `"`);
+    routings = JSON.parse(itemArrayParsed);
+
+    return routings;
   }
 
   extractBearerToken(): string {
@@ -128,6 +157,47 @@ export default class Scrapper {
     const ValuePattern = /value="([^"]*)"/;
     const emailValue = guestEmailFieldElem[0].match(ValuePattern);
     return emailValue ? emailValue[1] : null;
+  }
+
+  extractReservationRateCode(): string | null {
+    const rateCodeVarPattern = new RegExp(`var rate_code = "(.*)";`);
+    const rateCodeMatch = this.htmlBody.match(rateCodeVarPattern);
+    if (rateCodeMatch) {
+      return rateCodeMatch[1]; // rate code always match at position 2
+    }
+
+    return null;
+  }
+
+  extractGuaranteeDocs(): any[] {
+    const validItems = [
+      "Cupón agencia de viajes",
+      "Carta garantía, cargo a tarjeta de crédito",
+      "Carta garantía de empresa",
+    ];
+
+    const tableDataPattern =
+      /<tr class="datosTabla">([\s\S\t.]*?)<\/tr>|<tr class="datosTablaAlter">([\s\S\t.]*?)<\/tr>/g;
+    const dataTables = this.htmlBody.match(tableDataPattern);
+    if (!dataTables) {
+      return [];
+    }
+
+    let docs: any[] = [];
+    dataTables.forEach((table) => {
+      const type = validItems.filter((item) => table.includes(item)).shift();
+      const docIdPattern = /10\d+/;
+      const docIdmatch = table.match(docIdPattern);
+      if (docIdmatch) {
+        const id = docIdmatch[0];
+        docs.push({
+          id,
+          type,
+        });
+      }
+    });
+
+    return docs;
   }
 
   extractReservationEmailCorp(): string | null {

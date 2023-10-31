@@ -9,7 +9,7 @@ import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../../consts";
 // shared utils
 import {
   getReservationLedgerList,
-  getLedgerMovements,
+  getLedgerTransactions,
   getReservationContact,
   getReservationList,
   changeLedgerStatus,

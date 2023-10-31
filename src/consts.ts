@@ -7,6 +7,15 @@ export const IN_HOUSE_FILTER = "in-house";
 export const INVOICED = "Timbrado";
 export const PRE_INVOICED = "PreFactura";
 
+//  Principal Menu skeleton
+export const menuOperationsNames = [
+  "Login",
+  "Invoicer",
+  "Print docs",
+  "Start Noktos process",
+  "Check PIT",
+];
+
 // printer guides
 export const reportsByUser = {
   accountant: [

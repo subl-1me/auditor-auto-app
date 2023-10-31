@@ -6,6 +6,7 @@ import Logger from "./logger/Logger";
 import Noktos from "./noktosProcess/Noktos";
 import Invoicer from "./invoicer/Invoicer";
 import Printer from "./printer/Printer";
+import PITChecker from "./pit-checker/PitChecker";
 
 export default class OperationManager {
   constructor() {}
@@ -35,6 +36,11 @@ export default class OperationManager {
       case "Print docs":
         const printer = new Printer();
         operationResponse = await printer.performPrinter(menuStack);
+        break;
+
+      case "Check PIT":
+        const pitChecker = new PITChecker();
+        operationResponse = await pitChecker.performChecker();
         break;
       default:
         operationResponse = {

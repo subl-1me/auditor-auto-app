@@ -2,10 +2,14 @@ import FrontService from "../services/FrontService";
 import TokenStorage from "./TokenStorage";
 import Scrapper from "../Scrapper";
 
+// Tyoes
 import Ledger from "../types/Ledger";
 import Payment from "../types/Payment";
 import Invoice from "../types/Invoice";
 import Reservation from "../types/Reservation";
+import Transaction from "../types/Transaction";
+import GuaranteeDoc from "../types/GuaranteeDoc";
+import { RateDetails, Rate } from "../types/RateDetails";
 
 import {
   DEPARTURES_FILTER,
@@ -30,7 +34,41 @@ const {
   FRONT_API_RSRV_NEW_PAYMENT,
   FRONT_API_RSRV_INVOICES,
   FRONT_API_RSRV_LIST,
+  FRONT_API_RSRV_RATES,
+  FRONT_API_RSRV_GET_RATE,
+  FRONT_API_RSRV_GUARANTEE_DOCS,
+  FRONT_API_DOWNLOAD_DOC,
+  FRONT_API_RSRV_ROUTINGS,
+  FRONT_API_RSRV_CERTIFICATE,
 } = process.env;
+
+export async function getReservationCertificate(
+  reservationId: string
+): Promise<string | null> {
+  if (!FRONT_API_RSRV_CERTIFICATE) {
+    throw new Error("Endpoint cannot be null");
+  }
+
+  if (!reservationId) {
+    throw new Error("Reservation ID is required.");
+  }
+
+  let _FRONT_API_RSRV_CERTIFICATE = FRONT_API_RSRV_CERTIFICATE.replace(
+    "{rsrvIdField}",
+    reservationId
+  );
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.getRequest(
+    _FRONT_API_RSRV_CERTIFICATE,
+    authTokens
+  );
+
+  const scrapper = new Scrapper(response);
+  let certificateId = scrapper.extractCertificateId();
+
+  return certificateId;
+}
 
 export async function getReservationLedgerList(
   reservationId: string
@@ -60,15 +98,17 @@ export async function getReservationLedgerList(
   for (const ledger of response) {
     if (ledger.folioStatus === "OPEN") {
       // only gets movements if sheet is open
-      const movements = await getLedgerMovements(
+      const transactions = await getLedgerTransactions(
         `${reservationId}.${ledger.numFolio}`
       );
+      let balance = parseFloat(ledger.folioBalance.toString()).toFixed(2);
       ledgerList.push({
         ledgerNo: ledger.numFolio,
         status: ledger.folioStatus,
-        balance: ledger.folioBalance | 0,
+        balance: Number(balance),
         isBalanceCredit: ledger.folioBalance < 0,
-        movements,
+        isCertificated: ledger.showCertificated,
+        transactions,
       });
     } else {
       ledgerList.push({
@@ -76,7 +116,8 @@ export async function getReservationLedgerList(
         status: ledger.folioStatus,
         balance: ledger.folioBalance | 0,
         isBalanceCredit: ledger.folioBalance < 0,
-        movements: [],
+        isCertificated: ledger.showCertificated,
+        transactions: [],
       });
     }
   }
@@ -131,24 +172,51 @@ export async function getReservationList(
   };
 
   // map response items to Reservation interface
-  const reservations: Reservation[] = items
+  let reservations: Reservation[] = [];
+  reservations = items
     .map((item: any) => {
-      const rsrvId = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
-      const reservation: Reservation = {
+      let rsrvId = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
+      return {
         id: rsrvId, // in this use case id must be an string because of API's requirements
         guestName: item.nameGuest,
-        room: item.room,
+        room: Number(item.room),
         dateIn: item.dateIn,
         dateOut: item.dateOut,
         status: item.statusGuest,
         company: item.company,
         agency: item.agency,
       };
-
-      return reservation;
     })
     .sort(sortRsrvByRoomNumber);
   return reservations;
+}
+
+export async function getReservationRateCode(
+  reservationId: string
+): Promise<string | null> {
+  const authTokens = await TokenStorage.getData();
+  if (!FRONT_API_RSRV_GET_RATE) {
+    throw new Error("Endpoint cannot be null");
+  }
+
+  const _FRONT_API_RSRV_GET_RATE = FRONT_API_RSRV_GET_RATE.replace(
+    "{rsrvIdField}",
+    reservationId
+  );
+
+  const response = await frontService.getRequest(
+    _FRONT_API_RSRV_GET_RATE,
+    authTokens
+  );
+
+  if (typeof response !== "string") {
+    throw new Error("Expected a STRING response. Try login again");
+  }
+
+  const scrapper = new Scrapper(response);
+  const rateCode = scrapper.extractReservationRateCode();
+
+  return rateCode;
 }
 
 export async function getReservationInvoiceList(
@@ -233,6 +301,162 @@ export async function getReservationInvoiceList(
   return invoices;
 }
 
+export async function getReservationRates(
+  reservationId: string
+): Promise<RateDetails> {
+  if (!FRONT_API_RSRV_RATES) {
+    throw new Error("Endpoint cannot be null");
+  }
+
+  // first get rate code
+  const rateCode = await getReservationRateCode(reservationId);
+  if (!rateCode) {
+    throw new Error("Error trying to get rate code");
+  }
+
+  const FRONT_API_RSRV_RATES_MODF = FRONT_API_RSRV_RATES.replace(
+    "{rsrvIdField}",
+    reservationId
+  )
+    .replace("{appDateField}", "2023/10/30")
+    .replace("{rateCodeField}", rateCode);
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.getRequest(
+    FRONT_API_RSRV_RATES_MODF,
+    authTokens
+  );
+
+  if (typeof response === "string") {
+    throw new Error(
+      "Error trying to get reservation rates data. Try log in again."
+    );
+  }
+
+  const { rows } = response;
+  const { TotalAmount } = response.userdata;
+  // map items
+  let rates: Rate[] = [];
+  rates = rows.map((item: any) => {
+    return {
+      code: item.cell[1].trim(),
+      dateToApply: item.cell[2].trim(),
+      totalNoTax: Number(parseFloat(item.cell[3].trim()).toFixed(2)),
+      totalWTax: Number(parseFloat(item.cell[5].trim()).toFixed(2)),
+      currency: item.cell[6].trim(),
+    };
+  });
+
+  return {
+    total: Number(parseFloat(TotalAmount).toFixed(2)),
+    rates,
+  };
+}
+
+export async function getReservationGuaranteeDocs(
+  reservationId: string
+): Promise<GuaranteeDoc[]> {
+  let docs: GuaranteeDoc[] = [];
+
+  if (!FRONT_API_RSRV_GUARANTEE_DOCS) {
+    throw new Error("ENDPOINT NULL");
+  }
+
+  let _FRONT_API_RSRV_GUARANTEE_DOCS = FRONT_API_RSRV_GUARANTEE_DOCS?.replace(
+    "{rsrvIdField}",
+    reservationId
+  );
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.getRequest(
+    _FRONT_API_RSRV_GUARANTEE_DOCS,
+    authTokens
+  );
+
+  const scrapper = new Scrapper(response);
+  const scrappedDocs = scrapper.extractGuaranteeDocs();
+  if (scrappedDocs.length > 0) {
+    docs = scrappedDocs.map((doc) => {
+      let _FRONT_API_DOWNLOAD_DOC =
+        FRONT_API_DOWNLOAD_DOC?.replace("{docIdField}", doc.id) ||
+        "INVALID_URL";
+      return {
+        id: doc.id,
+        type: doc.type,
+        downloadUrl: _FRONT_API_DOWNLOAD_DOC,
+      };
+    });
+  }
+
+  return docs;
+}
+
+export async function getReservationRoutings(
+  reservationId: string
+): Promise<any> {
+  if (!FRONT_API_RSRV_ROUTINGS) {
+    throw new Error("Routings endpoint cannot be null.");
+  }
+
+  const authTokens = await TokenStorage.getData();
+  let formData = new FormData();
+  formData.append("_hdn001", "KFwHWn911eaVeJhL++adWg==");
+  formData.append("_hdn002", "false");
+  formData.append("_hdn003", "KFwHWn911eaVeJhL++adWg==");
+  formData.append("_hdnPropName", "City Express Ciudad Juarez");
+  formData.append("_hdnRoleName", "RecepcionT");
+  formData.append("hdnGuestCode", `${reservationId}`);
+  formData.append("hdnGuestStatus", "CHIN");
+  formData.append("hdnSafePeople", "");
+  formData.append("hdnGuestFolio", "1");
+  formData.append("__RequestVerificationToken", authTokens.verificationToken);
+
+  const response = await frontService.postRequest(
+    formData,
+    FRONT_API_RSRV_ROUTINGS,
+    authTokens
+  );
+
+  const scrapper = new Scrapper(response.data);
+  let routings: any[] = [];
+  routings = scrapper.extractRoutings();
+  // console.log(routings);
+
+  if (routings.length === 1) {
+    // if only 1, means this reservation is routed.
+    const routingData = routings.pop();
+    const parent = routingData.RsrvTarget || "";
+    if (parent === reservationId) {
+      const child = routingData.RsrvSource;
+      return {
+        isParent: true,
+        child,
+      };
+    }
+
+    return {
+      isParent: false,
+      parent,
+    };
+  }
+
+  // it means it is a parent router.
+  if (routings.length > 1) {
+    const childReservations: string[] = routings.map((routing) => {
+      if (routing.RsrvSource !== reservationId) {
+        return routing.RsrvSource;
+      }
+    });
+
+    return {
+      isParent: true,
+      childs: childReservations,
+    };
+  }
+
+  return routings;
+}
+
 export async function addNewPayment(payment: Payment): Promise<any> {
   if (!FRONT_API_RSRV_NEW_PAYMENT) {
     throw new Error("Endpoint cannot be undefined");
@@ -262,7 +486,7 @@ export async function addNewPayment(payment: Payment): Promise<any> {
   return response;
 }
 
-export async function getLedgerMovements(ledgerCode: string): Promise<any> {
+export async function getLedgerTransactions(ledgerCode: string): Promise<any> {
   if (!FRONT_API_RSRV_FOLIOS_MOVS) {
     throw new Error("FRONT_API_RSRV_FOLIOS endpoint cannot be undefined");
   }
@@ -283,7 +507,22 @@ export async function getLedgerMovements(ledgerCode: string): Promise<any> {
     );
   }
 
-  return response.data;
+  // map to Transaction type
+  let transactions: Transaction[] = [];
+  transactions = response.data.map((item: any) => {
+    let transType = item.transType.includes("P ") ? "PAYMENT" : "CHARGE";
+    let amount = item.postAmount;
+    return {
+      // Front2Go API uses payments with minus (-) signal to show that is a payment instead a charge
+      type: transType,
+      isRefund: transType === "PAYMENT" && amount > 0 ? true : false,
+      code: item.transCode,
+      amount,
+      date: item.dateCreate,
+    };
+  });
+
+  return transactions;
 }
 
 export async function changeLedgerStatus(

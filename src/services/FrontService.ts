@@ -24,7 +24,7 @@ export default class FrontService {
 
   /**
    * Creates a new post request
-   * @param {object} data Data to send to API
+   * @param {object} formData Data to send to API
    * @param {string} endpoint API URL
    */
   async postRequest(
@@ -45,10 +45,9 @@ export default class FrontService {
           data: formData,
           headers: {
             Authorization: `Bearer ${authentication.bearerToken}`,
-            "X-AjaxPro-Method": "GetReceptorData",
             Cookie:
               authentication.aspNetTokenCookie +
-              ` mAutSession=${authentication.mAutSession}`,
+              `; mAutSession=${authentication.mAutSession}; `,
           },
         });
       } else {
@@ -130,10 +129,7 @@ export default class FrontService {
    * @param endpoint API URL
    * @returns response data as string or object
    */
-  async getRequest(
-    endpoint?: string,
-    authentication?: any
-  ): Promise<string | any[]> {
+  async getRequest(endpoint?: string, authentication?: any): Promise<any> {
     try {
       //TODO: Fix this error with Typescript, doesn't recognize
       // .ENV variables so endpoint must be optional
@@ -144,9 +140,10 @@ export default class FrontService {
           url: endpoint,
           headers: {
             Authorization: `Bearer ${authentication.bearerToken}`,
+            // "X-Requested-With": "XMLHttpRequest",
             Cookie:
               authentication.aspNetTokenCookie +
-              ` mAutSession=${authentication.mAutSession}`,
+              ` mAutSession=${authentication.mAutSession};`,
           },
         });
         const { statusCode } = response.request.res;
@@ -165,10 +162,11 @@ export default class FrontService {
           );
         }
       }
+      // console.log(response);
       return response.data;
-    } catch (err) {
+    } catch (err: any) {
       // console.log(err);
-      return "FAILED";
+      return err.message;
     }
   }
 }
