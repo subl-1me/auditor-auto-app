@@ -1,5 +1,4 @@
 import inquirer from "inquirer";
-import OperationManager from "../OperationManager";
 
 export default class Home {
   constructor() {
@@ -16,6 +15,7 @@ export default class Home {
           "Login",
           "Invoicer",
           "Print docs",
+          "Check PIT",
           // "Start Noktos process",
           new inquirer.Separator(),
           "Exit",

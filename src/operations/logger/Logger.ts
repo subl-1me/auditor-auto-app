@@ -29,7 +29,7 @@ export default class Logger {
       formData.append("_hdn002", "");
       formData.append("_hdnPropName", "City Express Ciudad Juarez");
       formData.append("_hdnRoleName", "RecepcionT");
-      formData.append("_hdnAppDate", "2023/09/30");
+      formData.append("_hdnAppDate", "2023/10/09");
       formData.append("__RequestVerificationToken", verificationToken);
 
       // I'll use API search endpoint to get ASP token at first request

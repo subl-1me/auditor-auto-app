@@ -6,4 +6,6 @@ import Scrapper from "../Scrapper";
 // load mock data
 import MockData from "./mock/mock-data";
 
-describe("Scrapper tests", function () {});
+describe("Scrapper tests", function () {
+  it("should get reservation coupons", () => {});
+});
