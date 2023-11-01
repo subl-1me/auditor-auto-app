@@ -40,6 +40,10 @@ const {
   FRONT_API_DOWNLOAD_DOC,
   FRONT_API_RSRV_ROUTINGS,
   FRONT_API_RSRV_CERTIFICATE,
+  FRONT_API_INIT_LEDGER_INVOICE,
+  FRONT_API_SEARCH_RFC,
+  FRONT_API_GENERATE_PRE_INVOICE,
+  FRONT_API_GENERATE_INVOICE,
 } = process.env;
 
 export async function getReservationCertificate(
@@ -318,7 +322,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2023/10/30")
+    .replace("{appDateField}", "2023/10/31")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
@@ -523,6 +527,147 @@ export async function getLedgerTransactions(ledgerCode: string): Promise<any> {
   });
 
   return transactions;
+}
+
+export async function getInvoiceReceptor(
+  reservationId: string,
+  ledgerNo: number,
+  RFC: string
+): Promise<any> {
+  const context = {
+    context: {
+      FiscalID: "",
+      NumberOfItems: 0,
+      PropCode: "CECJS",
+      RAnticipo: "",
+      TargetFolio: reservationId + "." + ledgerNo.toString(),
+      Text: RFC,
+    },
+  };
+
+  if (!FRONT_API_SEARCH_RFC) {
+    throw new Error("RFC SEARCH ENDPOINT CANNOT BE NULL");
+  }
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.postRequest(
+    context,
+    FRONT_API_SEARCH_RFC,
+    authTokens
+  );
+
+  const { data } = response;
+
+  return data.d.Items[0];
+}
+
+export async function generatePreInvoice(
+  reservationId: string,
+  ledgerNo: number,
+  receptor: any
+): Promise<any> {
+  const receptorNameSegments = receptor.Text.split("-");
+  const receptorName = receptorNameSegments[2].trim();
+  const receptorId = receptor.value;
+  console.log("----");
+  console.log(`Currently invoicing to: ${receptorName}`);
+  console.log(receptorName);
+  console.log("---- \n\n");
+
+  const invoiceData = {
+    pGuest_code: reservationId,
+    pProp_Code: "CECJS",
+    pFolio_code: reservationId + "." + ledgerNo.toString(),
+    pReceptorId: receptorId,
+    pFormat: "D",
+    pNotas: "",
+    pCurrency: "MXN",
+    pUsoCFDI: "G03",
+    pReceptorNameModified: receptorName,
+    pIdiom: "Spa",
+    pUser: "",
+    pReceptorCP_Modified: "",
+  };
+
+  if (!FRONT_API_GENERATE_PRE_INVOICE) {
+    throw new Error("INVOICE GENERATOR ENDPOINT CANNOT BE NULL");
+  }
+
+  const authTokens = await TokenStorage.getData();
+  const preInvoiceRes = await frontService.postRequest(
+    invoiceData,
+    FRONT_API_GENERATE_PRE_INVOICE,
+    authTokens
+  );
+
+  console.log(preInvoiceRes.data.d);
+  return preInvoiceRes.data.d;
+}
+
+export async function generateInvoice(
+  preInvoiceId: string,
+  reservationId: string,
+  ledgerNo: number
+) {
+  const body = {
+    pComprobante: preInvoiceId,
+    pProp_Code: "CECJS",
+    pFolio_code: reservationId + "." + ledgerNo.toString(),
+    pGuest_code: reservationId,
+    pFormat: "D",
+    pNotas: "",
+    pCurrency: "MXN",
+    pUsoCFDI: "G03",
+    pReceptorNameModified: "",
+    pIdiom: "Spa",
+    pUser: "",
+  };
+
+  if (!FRONT_API_GENERATE_INVOICE) {
+    throw new Error("FRONT_API_GENERATE_INVOICE null");
+  }
+
+  const authTokens = await TokenStorage.getData();
+  const invoiceResponse = await frontService.postRequest(
+    body,
+    FRONT_API_GENERATE_INVOICE,
+    authTokens
+  );
+
+  const { data } = invoiceResponse;
+  return data;
+}
+
+export async function initializeLedgerInvoice(
+  reservationId: string,
+  ledgerNo: number
+): Promise<any> {
+  const body = {
+    pFolioCode: reservationId + "." + ledgerNo,
+    pPropCode: "CECJS",
+  };
+
+  if (!FRONT_API_INIT_LEDGER_INVOICE) {
+    throw new Error("INIT LEDGER API CANNOT BE NULL");
+  }
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.postRequest(
+    body,
+    FRONT_API_INIT_LEDGER_INVOICE,
+    authTokens
+  );
+
+  const { data } = response;
+  if (data.value === "|") {
+    return {
+      status: 200,
+    };
+  }
+
+  return {
+    status: 400,
+  };
 }
 
 export async function changeLedgerStatus(

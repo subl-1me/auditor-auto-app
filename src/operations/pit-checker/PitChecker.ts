@@ -90,7 +90,7 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2023/10/30";
+    const todayDate = "2023/10/31";
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
@@ -131,10 +131,9 @@ export default class PITChecker {
         continue;
       }
 
-      const { paymentsSum } = this.getTransactionsSum(
-        activeLedger.transactions
-      );
+      const sums = this.getTransactionsSum(activeLedger.transactions);
 
+      const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
       const certificateId = await getReservationCertificate(reservation.id);
       if (certificateId) {
         console.log("This reservation has a certificate.");
@@ -204,7 +203,13 @@ export default class PITChecker {
       if (balanceAbs > total || paymentsSum > total) {
         console.log("Balance is greater than total. Check payments manually.");
         console.log("\n");
-        rsrvPendingToCheck.push(reservation.room);
+        const diff = Number(
+          parseFloat((total - paymentsSum).toString()).toFixed(2)
+        );
+        rsrvPendingToCheck.push({
+          room: reservation.room,
+          diff,
+        });
         continue;
       }
 
