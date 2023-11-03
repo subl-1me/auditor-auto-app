@@ -6,6 +6,7 @@ import {
   getReservationGuaranteeDocs,
   getReservationRoutings,
   getReservationCertificate,
+  hasVirtualCard,
 } from "../../utils/reservationUtlis";
 import { IN_HOUSE_FILTER } from "../../consts";
 
@@ -90,7 +91,7 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2023/10/31";
+    const todayDate = "2023/11/02";
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
@@ -103,10 +104,11 @@ export default class PITChecker {
     let rsrvErrors: any[] = [];
     let rsrvWithRoutings: any[] = [];
     let rsrvWithCertificate: any[] = [];
+    let rsrvWithVirtualCard: any[] = [];
 
     for (const reservation of reservations) {
       const ledgers = await getReservationLedgerList(reservation.id);
-      console.log(`${reservation.guestName} - ${reservation.room}`);
+      console.log(`Checking room: ${reservation.room}...`);
 
       // search a open ledger with transactions in
       const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");
@@ -153,6 +155,32 @@ export default class PITChecker {
           room: reservation.room,
         });
         continue;
+      }
+
+      const virtualCard = await hasVirtualCard(reservation.id);
+      if (virtualCard) {
+        const { amount } = virtualCard;
+        if (amount !== 0 || amount !== null) {
+          console.log(
+            `This reservation has a Virtual Credit Card - $${amount}\n`
+          );
+
+          if (total !== amount) {
+            console.log(
+              "Virtual Card balance doesnt match with reservation total.\n"
+            );
+          } else {
+            console.log("OK!\n");
+          }
+
+          rsrvWithVirtualCard.push({
+            room: reservation.room,
+            balanceMatch: total === amount,
+            virtualCardBalance: amount,
+            diff: Number(total - amount),
+          });
+          continue;
+        }
       }
 
       const routings = await getReservationRoutings(reservation.id);
@@ -214,6 +242,7 @@ export default class PITChecker {
       }
 
       console.log("calculating nights paid...");
+      // const nightsPaid = await this.calculateNightsPaid(rates.)
       const todayRateIndex = rates.findIndex(
         (rate) => rate.dateToApply === todayDate
       );
@@ -276,5 +305,7 @@ export default class PITChecker {
     console.log(rsrvWithRoutings);
     console.log("Certificated");
     console.log(rsrvWithCertificate);
+    console.log("Virtual cards");
+    console.log(rsrvWithVirtualCard);
   }
 }

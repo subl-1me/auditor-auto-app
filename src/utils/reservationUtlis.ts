@@ -44,6 +44,7 @@ const {
   FRONT_API_SEARCH_RFC,
   FRONT_API_GENERATE_PRE_INVOICE,
   FRONT_API_GENERATE_INVOICE,
+  FRONT_API_RESERVATION_NOTES,
 } = process.env;
 
 export async function getReservationCertificate(
@@ -223,6 +224,57 @@ export async function getReservationRateCode(
   return rateCode;
 }
 
+export async function getReservationNotes(
+  reservationId: string
+): Promise<any[]> {
+  if (!FRONT_API_RESERVATION_NOTES) {
+    throw new Error("Endpoing cannot be null");
+  }
+
+  const _FRONT_API_RESERVATION_NOTES = FRONT_API_RESERVATION_NOTES.replace(
+    "{rsrvIdField}",
+    reservationId
+  );
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.getRequest(
+    _FRONT_API_RESERVATION_NOTES,
+    authTokens
+  );
+
+  if (response.rows.length === 0) {
+    return [];
+  }
+
+  const notes = JSON.parse(response.rows[0].guenoNotes);
+  return notes;
+}
+
+export async function hasVirtualCard(reservationId: string): Promise<any> {
+  const notes = await getReservationNotes(reservationId);
+  const VIRTUAL_CREDIT_CARD_MSG = "Virtual Credit Card";
+  const virtualCardAmountPattern = /MXN\d+\.\d+/;
+
+  const hasVirtualCard = notes.find(
+    (note: any) => note.text === VIRTUAL_CREDIT_CARD_MSG
+  );
+
+  const hasVirtualCardAmount = notes.find((note: any) =>
+    note.text.match(/\d+\.\d+/)
+  );
+
+  if (!hasVirtualCard && !hasVirtualCardAmount) {
+    return null;
+  }
+
+  const amountMatch = hasVirtualCardAmount.text.match(/\d+\.\d+/);
+  if (!amountMatch) {
+    return { amount: 0 };
+  }
+
+  return { amount: Number(amountMatch[0]) };
+}
+
 export async function getReservationInvoiceList(
   reservation: Reservation
 ): Promise<Invoice[]> {
@@ -322,7 +374,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2023/10/31")
+    .replace("{appDateField}", "2023/11/02")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
