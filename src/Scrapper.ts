@@ -169,6 +169,20 @@ export default class Scrapper {
     return null;
   }
 
+  // Only use if there's a Virtual Card attached
+  extractReservationRateDescription(): string {
+    const spanDescPattern = new RegExp(
+      `<span id="lblRateDesc"([\\s\\S\\t.]*?)>(.*)<\/span>`
+    );
+    const spanDescMatch = this.htmlBody.match(spanDescPattern);
+    if (!spanDescMatch) {
+      return "Failed to match";
+    }
+
+    const spanDesc = spanDescMatch[0];
+    return spanDesc;
+  }
+
   extractGuaranteeDocs(): any[] {
     const validItems = [
       "Cupón agencia de viajes",

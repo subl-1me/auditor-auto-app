@@ -1,4 +1,5 @@
 import inquirer from "inquirer";
+import { HOME_MENU_OPERATION_NAMES } from "../../consts";
 
 export default class Home {
   constructor() {
@@ -11,23 +12,15 @@ export default class Home {
         type: "list",
         name: "home",
         message: "Select an option",
-        choices: [
-          "Login",
-          "Invoicer",
-          "Print docs",
-          "Check PIT",
-          "Start Noktos process",
-          new inquirer.Separator(),
-          "Exit",
-        ],
+        choices: HOME_MENU_OPERATION_NAMES,
       },
     ];
 
     const answer = await inquirer.prompt(questions);
-    if (answer.home === "Exit") {
+    if (answer.home === " Exit ") {
       return "Exit";
     }
 
-    return answer;
+    return answer.home;
   }
 }

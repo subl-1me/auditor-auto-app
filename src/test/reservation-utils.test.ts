@@ -12,7 +12,7 @@ import {
   getReservationNotes,
   getReservationRateCode,
   getReservationRoutings,
-  hasVirtualCard,
+  getVirtualCard,
 } from "../utils/reservationUtlis";
 import MockData from "./mock/mock-data";
 import Reservation from "../types/Reservation";
@@ -101,15 +101,15 @@ describe("Reservation-utils test suite", async () => {
   //   // expect(true).to.equal(true);
   // });
 
-  it("Should get reservation notes", async () => {
-    const reservationId = "20639553";
+  // it("Should get reservation notes", async () => {
+  //   const reservationId = "20639553";
 
-    const response = await getReservationNotes(reservationId);
-  });
+  //   const response = await getReservationNotes(reservationId);
+  // });
 
   it("Should check if reservation has Virtual Credit Card", async () => {
-    const reservationId = "20639553";
-    const response = await hasVirtualCard(reservationId);
+    const reservationId = "20743285";
+    const response = await getVirtualCard(reservationId, "EXDJ", "2023/11/13");
     console.log(response);
   });
 

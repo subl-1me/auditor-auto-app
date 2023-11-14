@@ -6,7 +6,7 @@ import {
   getReservationGuaranteeDocs,
   getReservationRoutings,
   getReservationCertificate,
-  hasVirtualCard,
+  getVirtualCard,
 } from "../../utils/reservationUtlis";
 import { IN_HOUSE_FILTER } from "../../consts";
 
@@ -91,12 +91,13 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2023/11/02";
+    const todayDate = "2023/11/14";
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
       .filter((reservation) => reservation.dateOut !== todayDate);
 
+    // console.log(reservations);
     let rsrvComplete: any[] = [];
     let rsrvPaidNights: any[] = [];
     let rsrvPendingToCheck: any[] = [];
@@ -153,11 +154,16 @@ export default class PITChecker {
         console.log("\n");
         rsrvComplete.push({
           room: reservation.room,
+          docs: guaranteeDocs,
         });
         continue;
       }
 
-      const virtualCard = await hasVirtualCard(reservation.id);
+      const virtualCard = await getVirtualCard(
+        reservation.id,
+        todayRate.code,
+        todayDate
+      );
       if (virtualCard) {
         const { amount } = virtualCard;
         if (amount !== 0 || amount !== null) {
@@ -175,6 +181,7 @@ export default class PITChecker {
 
           rsrvWithVirtualCard.push({
             room: reservation.room,
+            type: virtualCard.type,
             balanceMatch: total === amount,
             virtualCardBalance: amount,
             diff: Number(total - amount),
@@ -252,7 +259,7 @@ export default class PITChecker {
       for (const rate of remainingRates) {
         if (tempBalance >= rate.totalWTax) {
           nights++;
-          tempBalance -= rate.totalWTax;
+          tempBalance = Number((tempBalance - rate.totalWTax).toFixed(2));
           continue;
         }
 

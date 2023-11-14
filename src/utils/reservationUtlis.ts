@@ -16,6 +16,7 @@ import {
   IN_HOUSE_FILTER,
   PRE_INVOICED,
   INVOICED,
+  VIRTUAL_CARD_PROVIDERS,
 } from "../consts";
 
 import {
@@ -45,6 +46,8 @@ const {
   FRONT_API_GENERATE_PRE_INVOICE,
   FRONT_API_GENERATE_INVOICE,
   FRONT_API_RESERVATION_NOTES,
+  FRONT_API_ROUTING_SAVE,
+  FRONT_API_RATE_DESCRIPTION,
 } = process.env;
 
 export async function getReservationCertificate(
@@ -73,6 +76,40 @@ export async function getReservationCertificate(
   let certificateId = scrapper.extractCertificateId();
 
   return certificateId;
+}
+
+export async function createReservationRouting(
+  parentReservation: string | number,
+  childs: string[] | number[],
+  ledgerNo: Number,
+  reservationsToProcess: Reservation[]
+): Promise<void> {
+  if (!FRONT_API_ROUTING_SAVE) {
+    throw new Error("API ENDPOITN NULL");
+  }
+
+  const authTokens = await TokenStorage.getData();
+  for (const reservation of reservationsToProcess) {
+    console.log(`Processing for room: ${reservation.room}`);
+    let routingPayload = {
+      PropCode: "CECJS",
+      RoutingType: "transaction",
+      SourceRsrvCode: reservation.id,
+      SourceRsrvStatus: "CHIN",
+      TargetFolio: `${parentReservation}.${ledgerNo}`,
+      TargetRsrvCode: parentReservation,
+      TransCode: "HAB",
+    };
+
+    const routingSaveResponse = await frontService.postRequest(
+      routingPayload,
+      FRONT_API_ROUTING_SAVE,
+      authTokens
+    );
+
+    const data = routingSaveResponse.data;
+    console.log(data);
+  }
 }
 
 export async function getReservationLedgerList(
@@ -156,7 +193,7 @@ export async function getReservationList(
     gs: status === DEPARTURES_FILTER ? "CHOUT,CHIN,NOSHOW" : "",
     sidx: "NameGuest",
     sord: "asc",
-    rows: 100,
+    rows: 120,
     page: 1,
     ss: false,
     rcss: "",
@@ -250,29 +287,45 @@ export async function getReservationNotes(
   return notes;
 }
 
-export async function hasVirtualCard(reservationId: string): Promise<any> {
+export async function getVirtualCard(
+  reservationId: string,
+  rateCode: string,
+  appDate: string
+): Promise<any> {
   const notes = await getReservationNotes(reservationId);
-  const VIRTUAL_CREDIT_CARD_MSG = "Virtual Credit Card";
-  const virtualCardAmountPattern = /MXN\d+\.\d+/;
-
-  const hasVirtualCard = notes.find(
-    (note: any) => note.text === VIRTUAL_CREDIT_CARD_MSG
-  );
+  // const VIRTUAL_CREDIT_CARD_MSG = "Virtual Credit Card";
+  const virtualCardAmountPattern = /MXN \d+\.\d+/;
 
   const hasVirtualCardAmount = notes.find((note: any) =>
-    note.text.match(/\d+\.\d+/)
+    note.text.match(virtualCardAmountPattern)
   );
 
-  if (!hasVirtualCard && !hasVirtualCardAmount) {
+  if (!hasVirtualCardAmount) {
     return null;
   }
 
   const amountMatch = hasVirtualCardAmount.text.match(/\d+\.\d+/);
   if (!amountMatch) {
-    return { amount: 0 };
+    return { type: "Unknown", amount: 0 };
   }
 
-  return { amount: Number(amountMatch[0]) };
+  //TODO: Get Virtual Card type
+  const rateDescription = await GetReservationRateDescription(
+    reservationId,
+    appDate,
+    rateCode
+  );
+
+  VIRTUAL_CARD_PROVIDERS.forEach((type) => {
+    if (rateDescription.includes(type)) {
+      return {
+        type,
+        amount: Number(amountMatch[0]),
+      };
+    }
+  });
+
+  return { type: "Unknown", amount: Number(amountMatch[0]) };
 }
 
 export async function getReservationInvoiceList(
@@ -357,6 +410,37 @@ export async function getReservationInvoiceList(
   return invoices;
 }
 
+export async function GetReservationRateDescription(
+  reservationId: string,
+  appDate: string,
+  rateCode: string
+): Promise<any> {
+  if (!FRONT_API_RATE_DESCRIPTION) {
+    throw new Error("API ENDPOINT NULL");
+  }
+
+  const _FRONT_API_RATE_DESCRIPTION = FRONT_API_RATE_DESCRIPTION.replace(
+    "{rsrvIdField}",
+    reservationId
+  )
+    .replace("{rateCodeField}", rateCode)
+    .replace("{appDateField}", appDate);
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.getRequest(
+    _FRONT_API_RATE_DESCRIPTION,
+    authTokens
+  );
+
+  const scrapper = new Scrapper(response);
+  const rateDescription = scrapper.extractReservationRateDescription();
+  if (!rateDescription) {
+    return "";
+  }
+
+  return rateDescription;
+}
+
 export async function getReservationRates(
   reservationId: string
 ): Promise<RateDetails> {
@@ -374,7 +458,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2023/11/02")
+    .replace("{appDateField}", "2023/11/14")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
