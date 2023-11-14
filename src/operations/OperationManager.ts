@@ -7,6 +7,7 @@ import Noktos from "./noktosProcess/Noktos";
 import Invoicer from "./invoicer/Invoicer";
 import Printer from "./printer/Printer";
 import PITChecker from "./pit-checker/PitChecker";
+import Utils from "./utils/Utils";
 
 export default class OperationManager {
   constructor() {}
@@ -41,6 +42,11 @@ export default class OperationManager {
       case "Check PIT":
         const pitChecker = new PITChecker();
         operationResponse = await pitChecker.performChecker();
+        break;
+
+      case "Create routing":
+        const utils = new Utils();
+        const utilsRes = await utils.performUtil(operation);
         break;
       default:
         operationResponse = {

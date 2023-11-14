@@ -7,13 +7,26 @@ export const IN_HOUSE_FILTER = "in-house";
 export const INVOICED = "Timbrado";
 export const PRE_INVOICED = "PreFactura";
 
-//  Principal Menu skeleton
-export const menuOperationsNames = [
+//  Principal-Menu skeleton
+export const HOME_MENU_OPERATION_NAMES = [
   "Login",
   "Invoicer",
   "Print docs",
-  "Start Noktos process",
+  // "Start Noktos process",
   "Check PIT",
+  "Utils",
+  "Settings",
+  " Exit ",
+];
+
+// Virtual Card Providers
+export const VIRTUAL_CARD_PROVIDERS = ["Expedia", "Booking"];
+
+// Utils-Menu Skeleton
+export const UTILS_MENU_OPERATION_NAMES = [
+  "Create routing",
+  "Get reservation details",
+  " Return ",
 ];
 
 // printer guides

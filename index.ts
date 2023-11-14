@@ -19,7 +19,12 @@ async function main(): Promise<void> {
       break;
     }
 
-    const userProccecedChoice = await menuUtils.processUserChoice(userChoice);
+    console.log(userChoice);
+    if (userChoice === " Return ") {
+      menuStack.pop();
+    } else {
+      await menuUtils.processUserChoice(userChoice);
+    }
 
     // if (userChoice === "Return") {
     //   menuStack.pop();

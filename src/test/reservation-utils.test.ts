@@ -9,8 +9,10 @@ import {
   getReservationGuaranteeDocs,
   getReservationInvoiceList,
   getReservationList,
+  getReservationNotes,
   getReservationRateCode,
   getReservationRoutings,
+  getVirtualCard,
 } from "../utils/reservationUtlis";
 import MockData from "./mock/mock-data";
 import Reservation from "../types/Reservation";
@@ -63,40 +65,52 @@ describe("Reservation-utils test suite", async () => {
   it("should get reservation coupons", async () => {
     // const reservationId = "20269851";
     // await getReservationGuaranteeDocs(reservationId);
-    const reservations = await getReservationList(IN_HOUSE_FILTER);
-    for (const reservation of reservations) {
-      const routings = await getReservationRoutings(reservation.id);
-      console.log(routings);
-    }
+    // const reservations = await getReservationList(IN_HOUSE_FILTER);
+    // for (const reservation of reservations) {
+    //   const routings = await getReservationRoutings(reservation.id);
+    //   console.log(routings);
+    // }
     expect(true).to.equal(true);
   });
 
-  it("should get reservation routings", async () => {
-    const mockReservations = MockData.reservations;
-    const mockRoutings = MockData.routings;
+  // it("should get reservation routings", async () => {
+  //   const mockReservations = MockData.reservations;
+  //   const mockRoutings = MockData.routings;
 
-    let routers: any[] = [];
-    for (const reservation of mockReservations) {
-      mockRoutings.forEach((routing: any) => {
-        const isMainRouterSet = routers.find(
-          (router) => router.id === routing.RsrvTarget
-        );
+  //   let routers: any[] = [];
+  //   for (const reservation of mockReservations) {
+  //     mockRoutings.forEach((routing: any) => {
+  //       const isMainRouterSet = routers.find(
+  //         (router) => router.id === routing.RsrvTarget
+  //       );
 
-        if (isMainRouterSet) {
-          console.log("Pushing new routing...");
-          isMainRouterSet.rooms.push(reservation.id);
-        } else {
-          console.log("Setting new router...");
-          routers.push({
-            parentId: routing.RsrvTarget,
-            rooms: [],
-          });
-        }
-      });
-    }
+  //       if (isMainRouterSet) {
+  //         console.log("Pushing new routing...");
+  //         isMainRouterSet.rooms.push(reservation.id);
+  //       } else {
+  //         console.log("Setting new router...");
+  //         routers.push({
+  //           parentId: routing.RsrvTarget,
+  //           rooms: [],
+  //         });
+  //       }
+  //     });
+  //   }
 
-    // console.log(routers);
-    // expect(true).to.equal(true);
+  //   // console.log(routers);
+  //   // expect(true).to.equal(true);
+  // });
+
+  // it("Should get reservation notes", async () => {
+  //   const reservationId = "20639553";
+
+  //   const response = await getReservationNotes(reservationId);
+  // });
+
+  it("Should check if reservation has Virtual Credit Card", async () => {
+    const reservationId = "20743285";
+    const response = await getVirtualCard(reservationId, "EXDJ", "2023/11/13");
+    console.log(response);
   });
 
   // it("Should get reservation certificate", async () => {
