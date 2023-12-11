@@ -91,7 +91,7 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2023/11/14";
+    const todayDate = "2023/12/08";
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
@@ -127,6 +127,7 @@ export default class PITChecker {
       const { rates, total } = await getReservationRates(reservation.id);
       const todayRate = rates.find((rate) => rate.dateToApply === todayDate);
       if (!todayRate) {
+        console.log("TODAY RATE NOT FOUND");
         rsrvErrors.push({
           room: reservation.room,
           reason: "TODAY_RATE_NOT_FOUND",
@@ -183,6 +184,7 @@ export default class PITChecker {
             room: reservation.room,
             type: virtualCard.type,
             balanceMatch: total === amount,
+            reservationTotal: total,
             virtualCardBalance: amount,
             diff: Number(total - amount),
           });
@@ -289,7 +291,7 @@ export default class PITChecker {
 
       if (nights > 0) {
         console.log(`Total nights paid: ${nights}`);
-        rsrvPaidNights.push({
+        rsrvComplete.push({
           room: reservation.room,
           nightsPaid: nights,
         });
@@ -300,8 +302,6 @@ export default class PITChecker {
 
     console.log(`PAID:`);
     console.log(rsrvComplete);
-    console.log("Paid by nights:");
-    console.log(rsrvPaidNights);
     console.log(`\nPending:`);
     console.log(rsrvPendingToCheck);
     console.log(`\nPayment required;`);

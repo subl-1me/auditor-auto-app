@@ -29,10 +29,12 @@ export default class Noktos {
         IN_HOUSE_FILTER
       );
 
-      const reservationsToInclude: number[] = [209, 508, 506, 509];
-      let noktosReservations = reservations
-        .filter((reservation) => reservation.company === "NOKTOS-C")
-        .filter((reservation) => reservation.dateOut === "2023/10/31"); //TODO: implement current system date once AUD was completed
+      const reservationsToInclude: number[] = [209, 508, 506];
+      const reservationsToExclude: number[] = [202];
+      let noktosReservations = reservations.filter(
+        (reservation) => reservation.company === "NOKTOS-C"
+      );
+      // .filter((reservation) => reservation.dateOut === "2023/11/31"); //TODO: implement current system date once AUD was completed
 
       reservations.forEach((reservation) => {
         if (reservationsToInclude.includes(reservation.room)) {
@@ -44,7 +46,13 @@ export default class Noktos {
         return rsrvA.room - rsrvB.room;
       };
 
-      noktosReservations = noktosReservations.sort(sortRsrvByRoomNumber);
+      noktosReservations = noktosReservations
+        .sort(sortRsrvByRoomNumber)
+        .filter(
+          (reservation) => !reservationsToExclude.includes(reservation.room)
+        );
+      // console.log(noktosReservations);
+
       let pendings: any[] = [];
       let errors: any[] = [];
       let readyInvoices: any[] = [];
@@ -70,7 +78,7 @@ export default class Noktos {
         );
 
         // check if current ledger has 15 charges. That means 15 nights as well.
-        if (roomCharges && roomCharges.length !== 16) {
+        if (roomCharges && roomCharges.length !== 15) {
           pendings.push({
             room: reservation.room,
             reason: `TOTAL_CHARGES_DISMATCH`,
@@ -114,65 +122,65 @@ export default class Noktos {
             ""
           );
         console.log(changeLedgerStatuesRes.message + "\n");
-        // start invoicing
-        const NoktosRFC = "NAL190807BU2";
-        const NoktosEmail = "operaciones.noktos@gmail.com";
+        //   // start invoicing
+        //   // const NoktosRFC = "NAL190807BU2";
+        //   // const NoktosEmail = "operaciones.noktos@gmail.com";
 
-        // print invoice
-        // init ledger invoice
-        const initResponse = await reservationUtils.initializeLedgerInvoice(
-          reservation.id,
-          currentLedger.ledgerNo
-        );
-        if (initResponse.status !== 200) {
-          console.log("Error trying to initlize ledger invoice.");
-          pendings.push({
-            room: reservation.room,
+        //   // print invoice
+        //   // init ledger invoice
+        //   // const initResponse = await reservationUtils.initializeLedgerInvoice(
+        //   //   reservation.id,
+        //   //   currentLedger.ledgerNo
+        //   // );
+        //   // if (initResponse.status !== 200) {
+        //   //   console.log("Error trying to initlize ledger invoice.");
+        //   //   pendings.push({
+        //   //     room: reservation.room,
 
-            reason: `ERROR_INIT_LEDGER_INVOICE_NO_${currentLedger.ledgerNo}`,
-          });
-          continue;
-        }
+        //   //     reason: `ERROR_INIT_LEDGER_INVOICE_NO_${currentLedger.ledgerNo}`,
+        //   //   });
+        //   //   continue;
+        //   // }
 
-        // get invoice receptor
-        const RFCReceptor = await reservationUtils.getInvoiceReceptor(
-          reservation.id,
-          currentLedger.ledgerNo,
-          NoktosRFC
-        );
+        //   // get invoice receptor
+        //   // const RFCReceptor = await reservationUtils.getInvoiceReceptor(
+        //   //   reservation.id,
+        //   //   currentLedger.ledgerNo,
+        //   //   NoktosRFC
+        //   // );
 
-        const preInvoiceResponse = await reservationUtils.generatePreInvoice(
-          reservation.id,
-          currentLedger.ledgerNo,
-          RFCReceptor
-        );
+        //   // const preInvoiceResponse = await reservationUtils.generatePreInvoice(
+        //   //   reservation.id,
+        //   //   currentLedger.ledgerNo,
+        //   //   RFCReceptor
+        //   // );
 
-        const preInvoiceId = preInvoiceResponse[2];
-        const invoiceResponse = await reservationUtils.generateInvoice(
-          preInvoiceId,
-          reservation.id,
-          currentLedger.ledgerNo
-        );
+        //   // const preInvoiceId = preInvoiceResponse[2];
+        //   // const invoiceResponse = await reservationUtils.generateInvoice(
+        //   //   preInvoiceId,
+        //   //   reservation.id,
+        //   //   currentLedger.ledgerNo
+        //   // );
 
-        const invoiceData = invoiceResponse.d;
-        const localizator = invoiceData[1];
+        //   // const invoiceData = invoiceResponse.d;
+        //   // const localizator = invoiceData[1];
 
-        let invoiceDownloadUrl = FRONT_API_INVOICE_DOC_URL?.replace(
-          "{localizatorField}",
-          localizator
-        ).replace("{invoiceIdField}", preInvoiceId);
+        //   // let invoiceDownloadUrl = FRONT_API_INVOICE_DOC_URL?.replace(
+        //   //   "{localizatorField}",
+        //   //   localizator
+        //   // ).replace("{invoiceIdField}", preInvoiceId);
 
-        let invoice = {
-          room: reservation.room,
-          invoiceId: preInvoiceId,
-          invoiceDownloadUrl,
-        };
+        //   // let invoice = {
+        //   //   room: reservation.room,
+        //   //   invoiceId: preInvoiceId,
+        //   //   invoiceDownloadUrl,
+        //   // };
 
-        readyInvoices.push(invoice);
+        //   // readyInvoices.push(invoice);
       }
 
       // send invoices to printer
-      console.log(readyInvoices);
+      // console.log(readyInvoices);
     } catch (err: any) {
       console.log(err.message);
     }

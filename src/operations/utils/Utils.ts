@@ -1,4 +1,5 @@
 import { IN_HOUSE_FILTER } from "../../consts";
+import Reservation from "../../types/Reservation";
 import * as ReservationUtils from "../../utils/reservationUtlis";
 import inquirer from "inquirer";
 
@@ -20,10 +21,59 @@ export default class Utils {
 
         console.log(reservationToProcess);
         break;
+      case "Get reservation details":
+        const reservationIdentifier = await this.getReservationInput();
+        const reservationToCheck = await this.reservationExists(
+          reservationIdentifier
+        );
+        if (!reservationToCheck) {
+          console.log("This reservation does not exist");
+          return;
+        }
+
+        // const { rates, total } = await ReservationUtils.getReservationRates(
+        //   reservationToCheck.id
+        // );
+        console.log(reservationToCheck);
+        const docs = await ReservationUtils.getReservationGuaranteeDocs(
+          reservationToCheck.id
+        );
+        console.log(docs);
+
+        break;
       default:
         console.log("Invalid util operation");
         break;
     }
+  }
+
+  async getReservationInput(): Promise<string> {
+    const questions = [
+      {
+        type: "input",
+        name: "reservation",
+        message: "Type reservation room or ID to start checking:",
+      },
+    ];
+
+    const response = await inquirer.prompt(questions);
+    return response.reservation;
+  }
+
+  async reservationExists(
+    reservationIdentifier: string
+  ): Promise<Reservation | null> {
+    const reservationsInHouse = await ReservationUtils.getReservationList(
+      IN_HOUSE_FILTER
+    );
+
+    const reservationToCheck = reservationsInHouse.find(
+      (_reservation) =>
+        _reservation.id === reservationIdentifier ||
+        _reservation.room === Number(reservationIdentifier)
+    );
+
+    return reservationToCheck || null;
   }
 
   async handleRoutingCreation(): Promise<any> {
@@ -45,8 +95,9 @@ export default class Utils {
     const parent = responses.parent;
 
     const ledgerList = await ReservationUtils.getReservationLedgerList(parent);
-    if (!ledgerList) {
+    if (!ledgerList || ledgerList.length === 0) {
       console.log(`Ledger list not found for parent: ${parent}`);
+      throw new Error("No ledgers found");
     }
 
     let showLedgerList = [
