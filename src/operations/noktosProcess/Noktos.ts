@@ -29,8 +29,8 @@ export default class Noktos {
         IN_HOUSE_FILTER
       );
 
-      const reservationsToInclude: number[] = [209, 508, 506];
-      const reservationsToExclude: number[] = [202];
+      const reservationsToInclude: number[] = [508, 506, 209];
+      const reservationsToExclude: number[] = [];
       let noktosReservations = reservations.filter(
         (reservation) => reservation.company === "NOKTOS-C"
       );
@@ -51,7 +51,7 @@ export default class Noktos {
         .filter(
           (reservation) => !reservationsToExclude.includes(reservation.room)
         );
-      // console.log(noktosReservations);
+      console.log(noktosReservations);
 
       let pendings: any[] = [];
       let errors: any[] = [];

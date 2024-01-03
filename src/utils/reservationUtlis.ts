@@ -90,7 +90,7 @@ export async function getReservationCertificate(
 }
 
 export async function createReservationRouting(
-  parentReservation: string | number,
+  parentReservation: Reservation,
   childs: string[] | number[],
   ledgerNo: Number,
   reservationsToProcess: Reservation[]
@@ -107,8 +107,8 @@ export async function createReservationRouting(
       RoutingType: "transaction",
       SourceRsrvCode: reservation.id,
       SourceRsrvStatus: "CHIN",
-      TargetFolio: `${parentReservation}.${ledgerNo}`,
-      TargetRsrvCode: parentReservation,
+      TargetFolio: `${parentReservation.id}.${ledgerNo}`,
+      TargetRsrvCode: parentReservation.id,
       TransCode: "HAB",
     };
 
@@ -463,6 +463,7 @@ export async function getReservationList(
       };
     })
     .sort(sortRsrvByRoomNumber);
+
   return reservations;
 }
 
@@ -693,7 +694,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2023/12/08")
+    .replace("{appDateField}", "2024/01/02")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

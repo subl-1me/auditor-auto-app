@@ -10,35 +10,56 @@ export default class Utils {
     switch (util) {
       case "Create routing":
         const routingData = await this.handleRoutingCreation();
-        const { parent, childs, ledgerNoTarget, reservationToProcess } =
+        const { rsrvParent, childs, ledgerNoTarget, reservationToProcess } =
           routingData;
+
+        console.log("Parent: \n");
+        console.log(rsrvParent + "\n");
+        console.log("Childs: \n");
+        console.log(reservationToProcess + "\n");
+
+        await inquirer.prompt([
+          {
+            type: "input",
+            name: "confirm",
+            message: "ok?",
+          },
+        ]);
         const res = await ReservationUtils.createReservationRouting(
-          parent,
+          rsrvParent,
           childs,
           ledgerNoTarget,
           reservationToProcess
         );
 
-        console.log(reservationToProcess);
         break;
       case "Get reservation details":
-        const reservationIdentifier = await this.getReservationInput();
-        const reservationToCheck = await this.reservationExists(
-          reservationIdentifier
+        const reservations = await ReservationUtils.getReservationList(
+          IN_HOUSE_FILTER
         );
-        if (!reservationToCheck) {
-          console.log("This reservation does not exist");
-          return;
+        for (const reservation of reservations) {
+          const docs = await ReservationUtils.getReservationGuaranteeDocs(
+            reservation.id
+          );
+          console.log(`For rsrv: ${reservation.room}`);
+          console.log(docs + "\n");
         }
+        // const reservationIdentifier = await this.getReservationInput();
+        // const reservationToCheck = await this.reservationExists(
+        //   reservationIdentifier
+        // );
+        // if (!reservationToCheck) {
+        //   console.log("This reservation does not exist");
+        //   return;
+        // }
 
-        // const { rates, total } = await ReservationUtils.getReservationRates(
+        // // const { rates, total } = await ReservationUtils.getReservationRates(
+        // //   reservationToCheck.id
+        // // );
+        // const docs = await ReservationUtils.getReservationGuaranteeDocs(
         //   reservationToCheck.id
         // );
-        console.log(reservationToCheck);
-        const docs = await ReservationUtils.getReservationGuaranteeDocs(
-          reservationToCheck.id
-        );
-        console.log(docs);
+        // console.log(docs);
 
         break;
       default:
@@ -94,7 +115,26 @@ export default class Utils {
     const childs = responses.childs.split(" ");
     const parent = responses.parent;
 
-    const ledgerList = await ReservationUtils.getReservationLedgerList(parent);
+    const reservationsInHome = await ReservationUtils.getReservationList(
+      IN_HOUSE_FILTER
+    );
+
+    const rsrvParent = reservationsInHome.find(
+      (reservation) =>
+        reservation.id === parent || reservation.room === Number(parent)
+    );
+
+    if (!rsrvParent) {
+      console.log("Room not found.");
+      return;
+    }
+
+    console.log("Currently creating routing to: ");
+    console.log(`${rsrvParent.guestName} ~ ${rsrvParent.room}`);
+
+    const ledgerList = await ReservationUtils.getReservationLedgerList(
+      rsrvParent.id
+    );
     if (!ledgerList || ledgerList.length === 0) {
       console.log(`Ledger list not found for parent: ${parent}`);
       throw new Error("No ledgers found");
@@ -113,13 +153,10 @@ export default class Utils {
     const ledgerNoTarget = ledgerSelectRes.selectedLedger;
 
     console.log("Validating all childs reservations...");
-    const reservationsInHome = await ReservationUtils.getReservationList(
-      IN_HOUSE_FILTER
-    );
     let reservationToProcess = reservationsInHome.filter((reservation) =>
       childs.includes(reservation.room.toString())
     );
 
-    return { parent, childs, ledgerNoTarget, reservationToProcess };
+    return { rsrvParent, childs, ledgerNoTarget, reservationToProcess };
   }
 }
