@@ -14,6 +14,7 @@ export default class OperationManager {
 
   async handleOperation(operation: string, menuStack: MenuStack): Promise<any> {
     let operationResponse;
+    const utils = new Utils();
     switch (operation) {
       case "Login":
         const logger = new Logger();
@@ -45,8 +46,10 @@ export default class OperationManager {
         break;
 
       case "Create routing":
-        const utils = new Utils();
         const utilsRes = await utils.performUtil(operation);
+        break;
+      case "Get reservation details":
+        const utilRsrvRes = await utils.performUtil(operation);
         break;
       default:
         operationResponse = {

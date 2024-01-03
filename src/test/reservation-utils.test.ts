@@ -2,9 +2,12 @@ import { assert, expect } from "chai";
 import { describe, it } from "mocha";
 import Scrapper from "../Scrapper";
 import PitChecker from "../operations/pit-checker/PitChecker";
+import fs from "fs";
 
 import {
+  analyzeDoc,
   changeLedgerStatus,
+  reservationDataMatcher,
   getReservationCertificate,
   getReservationGuaranteeDocs,
   getReservationInvoiceList,
@@ -17,6 +20,8 @@ import {
 import MockData from "./mock/mock-data";
 import Reservation from "../types/Reservation";
 import { IN_HOUSE_FILTER } from "../consts";
+import path from "path";
+import GuaranteeDoc from "../types/GuaranteeDoc";
 
 describe("Reservation-utils test suite", async () => {
   // it("Should change reservation ledge status", async (done) => {
@@ -73,6 +78,57 @@ describe("Reservation-utils test suite", async () => {
     expect(true).to.equal(true);
   });
 
+  it("Should analyze and clasificate coupon", async () => {
+    // const reservations = await getReservationList(IN_HOUSE_FILTER);
+    // for (const reservation of reservations) {
+    //   const docs = await getReservationGuaranteeDocs(reservation.id);
+    //   if (docs.length > 0) {
+    //     // should classify coupon
+    //     for (const doc of docs) {
+    //       const analyzerResult = await analyzeDoc(doc);
+    //     }
+    //   }
+    // }
+    const tempDocsPath = path.join(__dirname, "../", "utils", "docsTemp");
+    const reservationsMock = [
+      {
+        reservationId1: "19248096",
+        reservationId2: "20470076",
+        guestName: "pawan upreti",
+        dateIn: "2023/10/31",
+        dateOut: "2923/11/30",
+        totalString: "$29,568.00",
+      },
+      {
+        reservationId1: "19248096",
+        reservationId2: "20470079",
+        guestName: "pradeep kumar",
+        dateIn: "2023/10/31",
+        dateOut: "2923/11/30",
+        totalString: "$29,568.00",
+      },
+      {
+        reservationId1: "19248096",
+        reservationId2: "20470081",
+        guestName: "mohan neelakan",
+        dateIn: "2023/10/31",
+        dateOut: "2923/11/30",
+        totalString: "$29,568.00",
+      },
+    ];
+    fs.readdir(tempDocsPath, async (err, files) => {
+      if (err) {
+        throw new Error("Error reading directory.");
+      }
+      let counter = 0;
+      for (const file of files) {
+        let filePath = path.join(tempDocsPath, file);
+        await reservationDataMatcher(filePath, reservationsMock[counter]);
+        counter++;
+      }
+    });
+  });
+
   // it("should get reservation routings", async () => {
   //   const mockReservations = MockData.reservations;
   //   const mockRoutings = MockData.routings;
@@ -107,11 +163,11 @@ describe("Reservation-utils test suite", async () => {
   //   const response = await getReservationNotes(reservationId);
   // });
 
-  it("Should check if reservation has Virtual Credit Card", async () => {
-    const reservationId = "20743285";
-    const response = await getVirtualCard(reservationId, "EXDJ", "2023/11/13");
-    console.log(response);
-  });
+  // it("Should check if reservation has Virtual Credit Card", async () => {
+  //   const reservationId = "20743285";
+  //   const response = await getVirtualCard(reservationId, "EXDJ", "2023/11/13");
+  //   console.log(response);
+  // });
 
   // it("Should get reservation certificate", async () => {
   //   const reservationId = "20611560";

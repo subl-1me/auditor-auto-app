@@ -1,5 +1,5 @@
 import path from "path";
-import dotenv from "dotenv";
+import dotenv, { configDotenv } from "dotenv";
 dotenv.config();
 const { FRONT_API_URL } = process.env;
 
@@ -200,10 +200,10 @@ export default class Scrapper {
     let docs: any[] = [];
     dataTables.forEach((table) => {
       const type = validItems.filter((item) => table.includes(item)).shift();
-      const docIdPattern = /10\d+/;
-      const docIdmatch = table.match(docIdPattern);
-      if (docIdmatch) {
-        const id = docIdmatch[0];
+      const docIdPattern = /fjsOpenDoc\('\d+'\)/;
+      const docIdMatch = table.match(docIdPattern);
+      if (docIdMatch) {
+        const id = (docIdMatch[0].match(/\d+/) || [null])[0];
         docs.push({
           id,
           type,

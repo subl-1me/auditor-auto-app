@@ -1,8 +1,11 @@
 import FrontService from "../services/FrontService";
 import TokenStorage from "./TokenStorage";
 import Scrapper from "../Scrapper";
+import { PdfReader } from "pdfreader";
+import Pdfparser from "pdf2json";
+import fs from "fs";
 
-// Tyoes
+// Types
 import Ledger from "../types/Ledger";
 import Payment from "../types/Payment";
 import Invoice from "../types/Invoice";
@@ -17,6 +20,13 @@ import {
   PRE_INVOICED,
   INVOICED,
   VIRTUAL_CARD_PROVIDERS,
+  guaranteeDocPatterns,
+  ACCESS_PROVIDER,
+  NOKTS_PROVIDER,
+  VECI_PROVIDER,
+  BANNED_COUPON_CONTENTS,
+  CTS_PROVIDER,
+  GBT_PROVIDER,
 } from "../consts";
 
 import {
@@ -24,6 +34,7 @@ import {
   invoiceReceptorRFCPattern,
   invoiceReceptorNamePattern,
 } from "../patterns";
+import path from "path";
 
 const frontService = new FrontService();
 const {
@@ -79,7 +90,7 @@ export async function getReservationCertificate(
 }
 
 export async function createReservationRouting(
-  parentReservation: string | number,
+  parentReservation: Reservation,
   childs: string[] | number[],
   ledgerNo: Number,
   reservationsToProcess: Reservation[]
@@ -96,8 +107,8 @@ export async function createReservationRouting(
       RoutingType: "transaction",
       SourceRsrvCode: reservation.id,
       SourceRsrvStatus: "CHIN",
-      TargetFolio: `${parentReservation}.${ledgerNo}`,
-      TargetRsrvCode: parentReservation,
+      TargetFolio: `${parentReservation.id}.${ledgerNo}`,
+      TargetRsrvCode: parentReservation.id,
       TransCode: "HAB",
     };
 
@@ -110,6 +121,228 @@ export async function createReservationRouting(
     const data = routingSaveResponse.data;
     console.log(data);
   }
+}
+
+/**
+ *
+ * @param doc It could be guaranteeDoc object or file path
+ */
+// export async function classifyDoc(doc: GuaranteeDoc | string): Promise<any> {
+//   // read doc and concatenate all texts
+//   const pdfParser = new Pdfparser();
+//   pdfParser.on("pdfParser_dataError", (errData) => {
+//     console.log(errData);
+//   });
+//   let content = "";
+//   pdfParser.on("pdfParser_dataReady", (pdfData) => {
+//     pdfData.Pages.forEach((page, index) => {
+//       page.Texts.forEach((text) => {
+//         // console.log(text);
+//         content += text.R.reduce(
+//           (prev, current) =>
+//             prev + decodeURIComponent(current.T.toLowerCase()) + " ",
+//           ""
+//         );
+//         // text.R.forEach((value) => {
+//         //   const valueText = decodeURIComponent(value.T);
+//         // });
+//       });
+//     });
+//     for (const BANNED of BANNED_COUPON_CONTENTS) {
+//       if (content.includes(BANNED)) {
+//         console.log("---------");
+//         console.log("Banned coupon.");
+//         console.log("---------\n");
+//         return;
+//       }
+//     }
+
+//     // console.log(content);
+//     // console.log("----\n");
+//     for (const entry in guaranteeDocPatterns) {
+//       if (content.includes(guaranteeDocPatterns[entry].primaryIdentificator)) {
+//         const provider = guaranteeDocPatterns[entry].provider;
+//         const confirmationPattern =
+//           guaranteeDocPatterns[entry].confirmationIdPattern;
+//         const dateInPattern = guaranteeDocPatterns[entry].dateInPattern;
+//         const totalPattern = guaranteeDocPatterns[entry].totalPattern;
+//         const hotelNamePattern = guaranteeDocPatterns[entry].hotelName;
+//         const guestNamePattern = guaranteeDocPatterns[entry].guestName;
+
+//         // if (provider != NOKTS_PROVIDER) {
+//         //   return;
+//         // }
+//         console.log(content);
+//         console.log(`Analyzing: ${doc}`);
+//         let couponDetails = {
+//           hotelName: "",
+//           hotelConfirmation: "",
+//           guestName: "",
+//           total: 0,
+//           dateIn: "",
+//           dateOut: "",
+//         };
+//         switch (provider) {
+//           case ACCESS_PROVIDER:
+//             console.log("This is an access coupon.");
+//             const confirmationIdMatch = content.match(confirmationPattern);
+//             if (confirmationIdMatch) {
+//               const confirmationId = confirmationIdMatch[0].match(/\d+/);
+//               couponDetails.hotelConfirmation = confirmationId
+//                 ? confirmationId[0]
+//                 : "";
+//             }
+
+//             const totalPatternMatch = content.match(totalPattern);
+//             if (totalPatternMatch) {
+//               const totalStringSanitized = totalPatternMatch[0]
+//                 .replace("$", "")
+//                 .replace(",", "")
+//                 .trim();
+//               couponDetails.total = Number(totalStringSanitized);
+//             }
+
+//             const dateInMatch = content.match(dateInPattern);
+//             if (dateInMatch) {
+//               // replace - to / for better handling to comparing with reservation date format
+//               couponDetails.dateIn = dateInMatch[0].replaceAll("-", "/");
+//               couponDetails.dateOut = dateInMatch[1].replaceAll("-", "/");
+//             }
+
+//             const hotelNameMatch = content.match(hotelNamePattern);
+//             if (hotelNameMatch) {
+//               couponDetails.hotelName = hotelNameMatch[0];
+//             }
+
+//             const guestNameMatch = content.match(guestNamePattern);
+//             const unwishChars = /[.,]/g;
+//             if (guestNameMatch) {
+//               const guestNameDirty = guestNameMatch[1];
+//               const guestNameSerialized = guestNameDirty.replace(
+//                 unwishChars,
+//                 ""
+//               );
+//               const guestNameSegments = guestNameSerialized
+//                 .split(" ")
+//                 .filter((segment) => segment !== "");
+
+//               // This should capitalize guest name
+//               // const capitalizedNameSegments = guestNameSegments.map(
+//               //   (segment) => {
+//               //     return segment.charAt(0).toUpperCase() + segment.slice(1);
+//               //   }
+//               // );
+//               // const guestName = capitalizedNameSegments.join(" ");
+//               const guestName = guestNameSegments.join(" ");
+//               couponDetails.guestName = guestName;
+//             }
+
+//             console.log(couponDetails);
+//             console.log("----\n");
+//             break;
+//           case NOKTS_PROVIDER:
+//             console.log("This is a noktos coupon");
+//             console.log("----\n");
+//             break;
+//           case VECI_PROVIDER:
+//             console.log("This is a Corte Ingles coupon");
+//             break;
+//           case CTS_PROVIDER:
+//             console.log("This is a Corporate Travel Services coupon");
+//             break;
+//           case GBT_PROVIDER:
+//             console.log("This is a GBT Travel Services coupon");
+//             break;
+//           default:
+//             console.log("Unkown doc");
+//         }
+//       }
+//     }
+//   });
+
+//   if (typeof doc === "string") {
+//     await pdfParser.loadPDF(doc);
+//   }
+// }
+
+export async function reservationDataMatcher(
+  doc: GuaranteeDoc | string,
+  reservation: any
+): Promise<any> {
+  // read doc and concatenate all texts
+  const pdfParser = new Pdfparser();
+  pdfParser.on("pdfParser_dataError", (errData) => {
+    console.log(errData);
+  });
+  let content = "";
+  const hotelCommonTags = [
+    "City Express Ciudad Juárez",
+    "City Express by Marriott Juárez",
+    "City Express by Marriott",
+  ];
+  pdfParser.on("pdfParser_dataReady", (pdfData) => {
+    pdfData.Pages.forEach((page, index) => {
+      page.Texts.forEach((text) => {
+        // console.log(text);
+        content += text.R.reduce(
+          (prev, current) =>
+            prev + decodeURIComponent(current.T.toLowerCase()) + " ",
+          ""
+        );
+        // text.R.forEach((value) => {
+        //   const valueText = decodeURIComponent(value.T);
+        // });
+      });
+    });
+    for (const BANNED of BANNED_COUPON_CONTENTS) {
+      if (content.includes(BANNED)) {
+        console.log("---------");
+        console.log("Banned coupon.");
+        console.log("---------\n");
+        return;
+      }
+    }
+
+    // console.log(content);
+    // console.log("----\n");
+    // let result = {
+    //   reservationId1: false
+    //   reservationId2: false
+    //   guestName: false
+    //   dateIn:
+    //   dateOut: "2923/11/30",
+    //   totalString: "$29,568.00",
+    // };
+    for (let key in reservation) {
+      if (key === "dateIn" || key === "dateOut") {
+        continue;
+        //TODO: Check in other part of code
+      }
+
+      if (content.includes(reservation[key])) {
+        console.log(`${key}was found in text\n`);
+        console.log(content);
+      }
+    }
+
+    console.log("----\n");
+  });
+
+  if (typeof doc === "string") {
+    await pdfParser.loadPDF(doc);
+  }
+}
+
+export async function analyzeDoc(doc: GuaranteeDoc): Promise<any> {
+  //download file and save it to read
+  const docDir = path.join(__dirname, "docsTemp");
+  const authTokens = await TokenStorage.getData();
+  const downloadedDoc = await frontService.downloadByUrl(
+    doc.id + ".pdf",
+    docDir,
+    authTokens,
+    doc.downloadUrl
+  );
 }
 
 export async function getReservationLedgerList(
@@ -230,6 +463,7 @@ export async function getReservationList(
       };
     })
     .sort(sortRsrvByRoomNumber);
+
   return reservations;
 }
 
@@ -296,9 +530,11 @@ export async function getVirtualCard(
   // const VIRTUAL_CREDIT_CARD_MSG = "Virtual Credit Card";
   const virtualCardAmountPattern = /MXN \d+\.\d+/;
 
-  const hasVirtualCardAmount = notes.find((note: any) =>
-    note.text.match(virtualCardAmountPattern)
-  );
+  const hasVirtualCardAmount = notes.find((note: any) => {
+    if (note.text) {
+      return note.text.match(virtualCardAmountPattern);
+    }
+  });
 
   if (!hasVirtualCardAmount) {
     return null;
@@ -458,7 +694,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2023/11/14")
+    .replace("{appDateField}", "2024/01/02")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
