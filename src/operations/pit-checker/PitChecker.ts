@@ -91,13 +91,13 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2024/01/02";
+    const todayDate = "2024/01/18";
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
-      .filter((reservation) => reservation.dateOut !== todayDate);
+      .filter((reservation) => reservation.dateOut !== todayDate)
+      .filter((reservation) => !isNaN(reservation.room));
 
-    // console.log(reservations);
     let rsrvComplete: any[] = [];
     let rsrvPaidNights: any[] = [];
     let rsrvPendingToCheck: any[] = [];
@@ -108,6 +108,7 @@ export default class PITChecker {
     let rsrvWithVirtualCard: any[] = [];
 
     for (const reservation of reservations) {
+      // if (reservation.room !== 623) continue;
       const ledgers = await getReservationLedgerList(reservation.id);
       console.log(`Checking room: ${reservation.room}...`);
 
@@ -196,11 +197,16 @@ export default class PITChecker {
       if (routings.length !== 0) {
         if (routings.isParent) {
           console.log("This reservation pays anothers.");
-          console.log("\n");
           rsrvWithRoutings.push({
             room: reservation.room,
             routings,
           });
+          console.log("Checking payment & rates...");
+          // const childReservations = reservations.filter(
+          //   (reservation, index) => reservation.room !== routings.childs[index]
+          // );
+          // console.log(routings);
+          console.log("\n");
           continue;
         }
 
