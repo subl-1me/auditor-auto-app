@@ -7,6 +7,7 @@ import Noktos from "./noktosProcess/Noktos";
 import Invoicer from "./invoicer/Invoicer";
 import Printer from "./printer/Printer";
 import PITChecker from "./pit-checker/PitChecker";
+import CheckVirtualCards from "./check-virtual-cards/CheckVirtualCards";
 import Utils from "./utils/Utils";
 
 export default class OperationManager {
@@ -43,6 +44,11 @@ export default class OperationManager {
       case "Check PIT":
         const pitChecker = new PITChecker();
         operationResponse = await pitChecker.performChecker();
+        break;
+
+      case "Check all virtual cards":
+        const checkVirtualCards = new CheckVirtualCards();
+        await checkVirtualCards.init();
         break;
 
       case "Create routing":

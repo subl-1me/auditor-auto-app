@@ -123,6 +123,65 @@ export async function createReservationRouting(
   }
 }
 
+export async function compareReservationsToBeRouted(
+  reservationsToProcess: Reservation[],
+  primaryReservation: Reservation,
+  ledgerNo: Number
+): Promise<any> {
+  const parentTargetLedger = (
+    await getReservationLedgerList(primaryReservation.id)
+  ).find((ledger) => ledger.ledgerNo === ledgerNo);
+
+  if (!parentTargetLedger) {
+    console.log(
+      "Ledger no was not found in primary reservation ledger list..."
+    );
+    return;
+  }
+
+  const payments = parentTargetLedger.transactions.reduce(
+    (accum, transaction) => {
+      if (transaction.type === "PAYMENT") {
+        return (accum += Math.abs(transaction.amount));
+      }
+      return accum;
+    },
+    0
+  );
+
+  let allReservationsTotal = 0;
+  // get primary reservation total
+
+  if (primaryReservation.status !== "POST") {
+    const primaryRsrvRates = await getReservationRates(primaryReservation.id);
+    allReservationsTotal += primaryRsrvRates.total;
+
+    // get all rsrv total & compare to primary rsrv's payment
+    console.log(`~ Primary reservation total:`);
+    console.log(
+      `~ ${primaryReservation.guestName} ~ ${primaryReservation.room} ~ ${primaryRsrvRates.total}`
+    );
+  }
+
+  console.log(`~ Child reservation totals:`);
+  for (let reservation of reservationsToProcess) {
+    let { total } = await getReservationRates(reservation.id);
+    console.log(`${reservation.guestName} ~ ${reservation.room} ~ ${total}`);
+    allReservationsTotal += total;
+  }
+
+  console.log(
+    `~ Total to pay (${
+      reservationsToProcess.length + 1
+    }): ${allReservationsTotal}`
+  );
+  console.log(`~ Total payments: ${payments}`);
+
+  const diff = (payments - allReservationsTotal).toFixed(2);
+  console.log(`Diff: ${diff}`);
+  return diff;
+}
+
 /**
  *
  * @param doc It could be guaranteeDoc object or file path
@@ -450,14 +509,15 @@ export async function getReservationList(
   let reservations: Reservation[] = [];
   reservations = items
     .map((item: any) => {
-      let rsrvId = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
+      let id = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
+      let status = item.statusGuest.trim();
       return {
-        id: rsrvId, // in this use case id must be an string because of API's requirements
+        id, // in this use case id must be an string because of API's requirements
         guestName: item.nameGuest,
         room: Number(item.room),
         dateIn: item.dateIn,
         dateOut: item.dateOut,
-        status: item.statusGuest,
+        status,
         company: item.company,
         agency: item.agency,
       };
@@ -694,7 +754,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/01/18")
+    .replace("{appDateField}", "2024/03/04")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

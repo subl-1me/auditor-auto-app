@@ -14,6 +14,7 @@ export const HOME_MENU_OPERATION_NAMES = [
   "Print docs",
   "Start Noktos process",
   "Check PIT",
+  "Check all virtual cards",
   "Utils",
   "Settings",
   " Exit ",

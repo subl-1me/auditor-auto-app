@@ -13,24 +13,60 @@ export default class Utils {
         const { rsrvParent, childs, ledgerNoTarget, reservationToProcess } =
           routingData;
 
-        console.log("Parent: \n");
-        console.log(rsrvParent + "\n");
-        console.log("Childs: \n");
-        console.log(reservationToProcess + "\n");
+        console.log("Parent:");
+        if (rsrvParent.status === "POST") {
+          console.log(`${rsrvParent.guestName} ~ FMV`);
+        } else {
+          console.log(`${rsrvParent.guestName} ~ ${rsrvParent.room}`);
+        }
+        console.log("Childs:");
+        reservationToProcess.forEach((reservation: Reservation) => {
+          console.log(`${reservation.guestName} ~ ${reservation.room}\n`);
+        });
 
         await inquirer.prompt([
           {
             type: "input",
             name: "confirm",
-            message: "ok?",
+            message: "Wanna confirm?",
           },
         ]);
-        const res = await ReservationUtils.createReservationRouting(
-          rsrvParent,
-          childs,
-          ledgerNoTarget,
-          reservationToProcess
+
+        console.log(
+          "\nAnalyzing primary reservation payment & comparing rates..."
         );
+        const routingDiff =
+          await ReservationUtils.compareReservationsToBeRouted(
+            reservationToProcess,
+            rsrvParent,
+            ledgerNoTarget
+          );
+
+        if (rsrvParent.status === "POST") {
+          console.log("Creating routings to FVM...");
+          const res = await ReservationUtils.createReservationRouting(
+            rsrvParent,
+            childs,
+            ledgerNoTarget,
+            reservationToProcess
+          );
+          console.log(res);
+        } else {
+          if (routingDiff < -10 || routingDiff > 10) {
+            console.log(
+              `There's a payment difference up to limit (10). Routing no able to proccess.`
+            );
+          } else {
+            console.log("Diff OK. Creating routing...");
+            const res = await ReservationUtils.createReservationRouting(
+              rsrvParent,
+              childs,
+              ledgerNoTarget,
+              reservationToProcess
+            );
+            console.log(res);
+          }
+        }
 
         break;
       case "Get reservation details":
@@ -129,8 +165,13 @@ export default class Utils {
       return;
     }
 
+    console.log(rsrvParent);
     console.log("Currently creating routing to: ");
-    console.log(`${rsrvParent.guestName} ~ ${rsrvParent.room}`);
+    if (rsrvParent.status === "POST") {
+      console.log(`${rsrvParent.guestName} ~ FVM`);
+    } else {
+      console.log(`${rsrvParent.guestName} ~ ${rsrvParent.room}`);
+    }
 
     const ledgerList = await ReservationUtils.getReservationLedgerList(
       rsrvParent.id
@@ -152,6 +193,7 @@ export default class Utils {
     const ledgerSelectRes = await inquirer.prompt(showLedgerList);
     const ledgerNoTarget = ledgerSelectRes.selectedLedger;
 
+    console.log(`Working on ledger no. ${ledgerNoTarget}\n`);
     console.log("Validating all childs reservations...");
     let reservationToProcess = reservationsInHome.filter((reservation) =>
       childs.includes(reservation.room.toString())
