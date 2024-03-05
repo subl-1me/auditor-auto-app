@@ -76,17 +76,19 @@ export default class FrontService {
     fileName: string,
     fileDir: string,
     authentication: any,
-    endpoint?: string
+    endpoint?: string,
+    data?: any
   ): Promise<any> {
     if (!endpoint) {
       throw new Error("Endpoint cannot be null.");
     }
 
-    console.log("Downloading reports file...");
+    // console.log("Downloading reports file...");
     const response = await this.http({
-      method: "GET",
+      method: data ? "POST" : "GET",
       url: endpoint,
       responseType: "stream",
+      data,
       headers: {
         Authorization: `Bearer ${authentication.bearerToken}`,
         Cookie:

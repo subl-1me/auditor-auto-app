@@ -21,6 +21,7 @@
     "inquirer": "^8.0.0",
     "nodemon": "^3.0.1",
     "nodemon-ts": "^1.0.1",
+    "pdf-text-reader": "^4.0.1",
     "pdf-to-printer": "^5.6.0",
     "pdf2json": "^3.0.5",
     "pdfreader": "^3.0.2",

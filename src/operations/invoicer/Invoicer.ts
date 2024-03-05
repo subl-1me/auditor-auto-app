@@ -3,6 +3,7 @@ import MenuStack from "../../MenuStack";
 import FrontService from "../../services/FrontService";
 import TokenStorage from "../../utils/TokenStorage";
 import inquirer from "inquirer";
+import { readPdfText } from "pdf-text-reader";
 
 import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../../consts";
 
@@ -18,6 +19,8 @@ import {
 
 import Ledger from "../../types/Ledger";
 import Reservation from "../../types/Reservation";
+import Scrapper from "../../Scrapper";
+import path from "path";
 
 const {
   FRONT_API_RSRV_LIST,
@@ -72,6 +75,11 @@ export default class Invoicer {
   }
 
   async invoiceByRoom(departures: Reservation[]): Promise<any> {
+    // to create expedia com payment:
+    // https://front2go.cityexpress.com/F2GoServicesEngine/Payment/Create
+    // {"transCode":"TVIRT","cardNum":"","month":0,"year":0,"secNum":"","titular":"","auth":"","notes":"","guestCode":"21448508","requerido":"","folio":"21448508.1","amount":"396.72","currency":"MXN","propCode":"CECJS","user":"HTJUGALDEA","postID":0,"savePayment":false,"binId":"","ledgerX1":"","ledgerX7":"","ledgerX8":"","refSmart":"","depTercero":"","depBoveda":false,"depSmart":false,"pinPad":"","pinParam":"","signature":"","smartId":"0"}
+    // res: {"errors":null,"warnings":null,"sucess":true}
+
     // ask for room number
     const request = [
       {
@@ -94,7 +102,7 @@ export default class Invoicer {
 
     do {
       const answer = await inquirer.prompt(request);
-      const roomNumber = answer["room-number"];
+      const roomNumber = Number(answer["room-number"]);
 
       const _reservation = departures.find(
         (reservation: Reservation) => reservation.room === roomNumber
@@ -117,6 +125,142 @@ export default class Invoicer {
     const currentLedger = ledgers.find((ledger) => {
       ledger.status === "OPEN";
     });
+
+    // Case 1: RFC is attached inside reservations data.
+    //TODO: Extract information about reservation's origin. Ex. C1ty Access
+    //TODO: If 'company' is not empty inside reservation data, we should extract information about
+    // company's data attached into Reservation's register card.
+    // https://front2go.cityexpress.com/F2goPMS/Portada/GetPdfRegistrationForm
+    //TODO: Once the data is recopield, it should suggest to user about the data & ask if he want to use it to
+    // create invoice.
+
+    // console.log(
+    //   `Searching data to create invoice, please confirm at finish:\n`
+    // );
+    // if (reservation.company === "") {
+    //   console.log("No company data found. Searching inside invoice history...");
+    //   return;
+    // }
+
+    // console.log(`Company: ${reservation.company}`);
+    // console.log(`Reading reservation's register card...`);
+
+    // const rsrvRegisterCardPayload = {
+    //   propCode: "CECJS",
+    //   sReservation: reservation.id,
+    //   userIdiom: "Spa",
+    // };
+
+    // let invoiceData = {
+    //   fiscalName: "",
+    //   RFC: "",
+    // };
+
+    // const authTokens = await TokenStorage.getData();
+    // const rsrvRegisterCardDownloadURL =
+    //   "https://front2go.cityexpress.com/F2goPMS/Portada/GetPdfRegistrationForm";
+    // const response = await this.frontService.downloadByUrl(
+    //   `${reservation.id}-registerCard.pdf`,
+    //   __dirname,
+    //   authTokens,
+    //   rsrvRegisterCardDownloadURL,
+    //   rsrvRegisterCardPayload
+    // );
+    // if (
+    //   response.status === 200 &&
+    //   response.message === "Report downloaded successfully"
+    // ) {
+    //   const docPath = path.join(
+    //     __dirname,
+    //     reservation.id + "-registerCard.pdf"
+    //   );
+
+    //   const pdfText = await readPdfText({ url: docPath });
+
+    //   //TODO: Search for matches to found RFC
+    //   const RFCPattern = /.{3}\d{7}.{1}\d{1}/g;
+    //   const RFCMatch = pdfText.match(RFCPattern);
+    //   if (RFCMatch) {
+    //     invoiceData.RFC = RFCMatch[1];
+    //     invoiceData.fiscalName = reservation.company;
+    //   }
+    // }
+
+    // console.log("Data found to invoice:");
+    // console.log(invoiceData);
+
+    // Case 2:
+    //TODO: Search inside history data to found a possible coincidence of old reservations and its invoices.
+    //TODO: Once data is recopiled, it should suggets to user about the data & ask if he want to use it
+    // to create invoice.
+
+    // Case 3:
+    //TODO: Create a generic invoice.
+    //TODO: Search for generic value ( generic value: 43)
+    // {"context":{"Text":"generico","NumberOfItems":0,"PropCode":"CECJS","TargetFolio":"21453957.1","FiscalID":"","RAnticipo":""}}
+    // https://front2go.cityexpress.com/WHS-PMS/AutoComplete.asmx/GetReceptor
+    //TODO: Set generic data into form:
+    // https://front2go.cityexpress.com/WHS-PMS/ajaxpro/Reserva_Facturacion,WHSPMS.ashx
+    // {"pReceptor_id":"43"}
+    //TODO: Generate pre invoice
+    // 	https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraPreFacturaV2
+    // {'pGuest_code':'21453957','pProp_Code':'CECJS','pFolio_code':'21453957.1','pReceptorId':'43','pFormat':'D','pNotas':'','pCurrency':'MXN','pUsoCFDI':'S01','pReceptorNameModified':'Generico','pIdiom':'Spa','pUser':'','pReceptorCP_Modified':''}
+    // res: {"d":["","G:\\CFDI\\IPJ030829QDA\\17162851.pdf","17162851"]}
+    //TODO: Ask for confirmation to user & proceed with invoice finalization.
+    // https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraFacturaV2
+    // {'pComprobante':'17162851','pProp_Code':'CECJS','pFolio_code':'21453957.1','pGuest_code':'21453957','pFormat':'D','pNotas':'','pCurrency':'MXN','pUsoCFDI':'S01','pReceptorNameModified':'','pIdiom':'Spa' ,'pUser':''}
+    // res:
+
+    console.log(`Generating generic invoice...`);
+    let genericDataPayload = {
+      pGuest_code: `${reservation.id}`,
+      pProp_Code: "CECJS",
+      pFolio_code: `${reservation.id}.1`,
+      pReceptorId: "43",
+      pFormat: "D",
+      pNotas: "",
+      pCurrency: "MXN",
+      pUsoCFDI: "S01",
+      pReceptorNameModified: "Generico",
+      pIdiom: "Spa",
+      pUser: "",
+      pReceptorCP_Modified: "",
+    };
+
+    const authTokens = await TokenStorage.getData();
+    const generatePreInvoiceAPI =
+      "https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraPreFacturaV2";
+    const res = await this.frontService.postRequest(
+      genericDataPayload,
+      generatePreInvoiceAPI,
+      authTokens
+    );
+
+    console.log("Pre invoiced.");
+
+    const genericDataConfirmationPayload = {
+      pComprobante: res.data.d[2],
+      pProp_Code: "CECJS",
+      pFolio_code: `${reservation.id}.1`,
+      pGuest_code: `${reservation.id}`,
+      pFormat: "D",
+      pNotas: "",
+      pCurrency: "MXN",
+      pUsoCFDI: "S01",
+      pReceptorNameModified: "",
+      pIdiom: "Spa",
+      pUser: "",
+    };
+
+    const generateInvoiceAPI =
+      "https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraFacturaV2";
+    const res2 = await this.frontService.postRequest(
+      genericDataConfirmationPayload,
+      generateInvoiceAPI,
+      authTokens
+    );
+
+    console.log("Invoiced.");
   }
 
   // private async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
