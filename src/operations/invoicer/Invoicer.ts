@@ -268,13 +268,14 @@ export default class Invoicer {
   }
   private async createInvoice(
     reservationId: string,
+    isGeneric: boolean,
     RFCData?: any
   ): Promise<any> {
     const ledgers = await getReservationLedgerList(reservationId);
     const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");
-    const ledgerTargetChoice = await this.askForLedger(ledgers);
+    const ledgerTargetNo = await this.askForLedger(ledgers);
     const ledgerTarget = ledgers.find(
-      (ledger) => ledger.ledgerNo === Number(ledgerTargetChoice)
+      (ledger) => ledger.ledgerNo === Number(ledgerTargetNo)
     );
 
     if (!ledgerTarget) {
@@ -299,6 +300,15 @@ export default class Invoicer {
         // create invoice
 
         console.clear();
+
+        if (isGeneric) {
+          const genericInvoiceRes = await this.createGenericInvoice(
+            reservationId,
+            ledgerTargetNo
+          );
+          console.log(genericInvoiceRes);
+          return genericInvoiceRes;
+        }
 
         console.log(`Invocing data:`);
         console.log(`RFC: ${RFCData.RFC}`);
@@ -478,11 +488,87 @@ export default class Invoicer {
       //TODO: if active ledger balance === 0 continue with invoice & suggest
       const createInvoiceRes = await this.createInvoice(
         reservation.id,
+        false,
         registerCardAnalyzer
       );
 
       //TODO: if active ledger balance !== 0 search for expected payment & suggest
     }
+  }
+
+  private async createGenericInvoice(
+    reservationId: string,
+    ledgerTargetNo: Number
+  ): Promise<any> {
+    const confirmPrompt = [
+      {
+        type: "confirm",
+        name: "confirm",
+        message: "Confirm create generic invoice?",
+      },
+    ];
+
+    const answer = await inquirer.prompt(confirmPrompt);
+    const confirm = answer.confirm;
+
+    if (!confirm) {
+      console.log("skipped");
+      return;
+    }
+
+    // set generic data
+    let genericDataPayload = {
+      pGuest_code: `${reservationId}`,
+      pProp_Code: "CECJS",
+      pReceptorId: "43",
+      pFolio_code: `${reservationId}.${ledgerTargetNo}`,
+      pFormat: "D",
+      pNotas: "",
+      pCurrency: "MXN",
+      pUsoCFDI: "S01",
+      pReceptorNameModified: "Generico",
+      pIdiom: "Spa",
+      pUser: "",
+      pReceptorCP_Modified: "",
+    };
+
+    console.log("Generating pre-invoice");
+    const authTokens = await TokenStorage.getData();
+    const generatePreInvoiceAPI =
+      "https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraPreFacturaV2";
+    const res = await this.frontService.postRequest(
+      genericDataPayload,
+      generatePreInvoiceAPI,
+      authTokens
+    );
+
+    const genericDataConfirmationPayload = {
+      pComprobante: res.data.d[2],
+      pProp_Code: "CECJS",
+      pFolio_code: `${reservationId}.${ledgerTargetNo}`,
+      pGuest_code: `${reservationId}`,
+      pFormat: "D",
+      pNotas: "",
+      pCurrency: "MXN",
+      pUsoCFDI: "S01",
+      pReceptorNameModified: "",
+      pIdiom: "Spa",
+      pUser: "",
+    };
+
+    console.log("Generating Invoice");
+    const generateInvoiceAPI =
+      "https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraFacturaV2";
+    const res2 = await this.frontService.postRequest(
+      genericDataConfirmationPayload,
+      generateInvoiceAPI,
+      authTokens
+    );
+
+    return {
+      status: 200,
+      invoiceStatus: "TIMBRADO",
+    };
   }
 
   async invoiceAllDepartures(): Promise<any> {
@@ -512,6 +598,11 @@ export default class Invoicer {
           );
           break;
         case "Generic":
+          const genericInvoiceRes = await this.createInvoice(
+            this.departures[i].id,
+            true
+          );
+          console.log(genericInvoiceRes);
           break;
         case "Skip":
           break;
