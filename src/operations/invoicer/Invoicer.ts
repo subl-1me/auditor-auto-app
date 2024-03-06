@@ -15,6 +15,7 @@ import {
   getReservationList,
   changeLedgerStatus,
   addNewLegder,
+  reservationDataMatcher,
 } from "../../utils/reservationUtlis";
 
 import Ledger from "../../types/Ledger";
@@ -39,8 +40,11 @@ const RFCList = [
 
 export default class Invoicer {
   private frontService: FrontService;
+  public departures: Reservation[];
+
   constructor() {
     this.frontService = new FrontService();
+    this.departures = [];
   }
 
   async performInvoicer(menuStack: MenuStack): Promise<any> {
@@ -53,8 +57,8 @@ export default class Invoicer {
       return { status: 200 };
     }
 
-    const departures = await getReservationList(DEPARTURES_FILTER);
-    if (departures.length === 0) {
+    this.departures = await getReservationList(DEPARTURES_FILTER);
+    if (this.departures.length === 0) {
       throw new Error("Departures list is empty.");
     }
 
@@ -62,10 +66,10 @@ export default class Invoicer {
     switch (invoicerSelection) {
       // we send departures array in all methods to avoid multiple requests
       case "Invoice all departures":
-        invoicerResponse = await this.invoiceAllDepartures(departures);
+        invoicerResponse = await this.invoiceAllDepartures();
         return invoicerResponse;
       case "Invoice by room":
-        invoicerResponse = await this.invoiceByRoom(departures);
+        invoicerResponse = await this.invoiceByRoom();
         break;
       default:
         break;
@@ -74,7 +78,7 @@ export default class Invoicer {
     return invoicerResponse;
   }
 
-  async invoiceByRoom(departures: Reservation[]): Promise<any> {
+  async invoiceByRoom(): Promise<any> {
     // to create expedia com payment:
     // https://front2go.cityexpress.com/F2GoServicesEngine/Payment/Create
     // {"transCode":"TVIRT","cardNum":"","month":0,"year":0,"secNum":"","titular":"","auth":"","notes":"","guestCode":"21448508","requerido":"","folio":"21448508.1","amount":"396.72","currency":"MXN","propCode":"CECJS","user":"HTJUGALDEA","postID":0,"savePayment":false,"binId":"","ledgerX1":"","ledgerX7":"","ledgerX8":"","refSmart":"","depTercero":"","depBoveda":false,"depSmart":false,"pinPad":"","pinParam":"","signature":"","smartId":"0"}
@@ -104,7 +108,7 @@ export default class Invoicer {
       const answer = await inquirer.prompt(request);
       const roomNumber = Number(answer["room-number"]);
 
-      const _reservation = departures.find(
+      const _reservation = this.departures.find(
         (reservation: Reservation) => reservation.room === roomNumber
       );
 
@@ -262,6 +266,82 @@ export default class Invoicer {
 
     console.log("Invoiced.");
   }
+  private async createInvoice(
+    reservationId: string,
+    RFCData?: any
+  ): Promise<any> {
+    const ledgers = await getReservationLedgerList(reservationId);
+    const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");
+    const ledgerTargetChoice = await this.askForLedger(ledgers);
+    const ledgerTarget = ledgers.find(
+      (ledger) => ledger.ledgerNo === Number(ledgerTargetChoice)
+    );
+
+    if (!ledgerTarget) {
+      console.log(`Ledger not found.`);
+      return;
+    }
+
+    console.log(`Ledger no. ${ledgerTarget.ledgerNo}`);
+    console.log(`Balance. ${ledgerTarget.balance}`);
+    console.log(`Status. ${ledgerTarget.status}`);
+
+    if (ledgerTarget.status === "OPEN" && ledgerTarget.balance === 0) {
+      console.log("Closing current ledger...");
+
+      const changeStatusRes = await changeLedgerStatus(
+        reservationId,
+        ledgerTarget.ledgerNo,
+        "CLOSE"
+      );
+
+      if (changeStatusRes.status == 200) {
+        // create invoice
+
+        console.clear();
+
+        console.log(`Invocing data:`);
+        console.log(`RFC: ${RFCData.RFC}`);
+        console.log(`FiscalName: ${RFCData.fiscalName}`);
+        console.log(`Invocing data:`);
+        const confirmPrompt = [
+          {
+            type: "confirm",
+            name: "confirm",
+            message: "Confirm if data is correct",
+          },
+        ];
+
+        const answer = await inquirer.prompt(confirmPrompt);
+        const confirm = answer.confirm;
+
+        if (!confirm) {
+          console.log("Skipped.\n");
+          return;
+        }
+
+        console.log("Generating pre-invoice...");
+      }
+    } else {
+      console.log(`Ledger's balance must be 0 to create a invoice.`);
+    }
+  }
+
+  private async askForLedger(ledgers: Ledger[]): Promise<Number> {
+    const showLedgerList = [
+      {
+        type: "list",
+        name: "selectedLedger",
+        message: "Select a ledger target:",
+        choices: ledgers.map((ledger) => ledger.ledgerNo),
+      },
+    ];
+
+    const ledgerSelection = await inquirer.prompt(showLedgerList);
+    return ledgerSelection.selectedLedger || 1;
+  }
+
+  private async askForRFCData(): Promise<any> {}
 
   // private async closeCurrentSheet(sheets: ReservationSheet[]): Promise<void> {
   //   const currentSheet = sheets.find((sheet) => sheet.isOpen);
@@ -321,72 +401,171 @@ export default class Invoicer {
     return response.data;
   }
 
-  async createInvoice(
-    departure: Reservation,
-    currentLedger: Ledger
-  ): Promise<any> {}
+  private async registrationCardAnalyzer(reservationId: string): Promise<any> {
+    const reservation = this.departures.find(
+      (reservation) => reservation.id === reservationId
+    );
+    if (!reservation) {
+      console.log(
+        `Reservation was not found. Please check reservation ID (${reservationId}).`
+      );
+      return;
+    }
 
-  async invoiceAllDepartures(departures: Reservation[]): Promise<any> {
+    console.log(`Reading reservation's register card...`);
+    if (reservation.company === "") {
+      console.log(`Reservation has no attached company data.
+      `);
+      return;
+    }
+
+    console.log(`Company: ${reservation.company}`);
+
+    const rsrvRegisterCardPayload = {
+      propCode: "CECJS",
+      sReservation: reservation.id,
+      userIdiom: "Spa",
+    };
+
+    const authTokens = await TokenStorage.getData();
+    const rsrvRegisterCardDownloadURL =
+      "https://front2go.cityexpress.com/F2goPMS/Portada/GetPdfRegistrationForm";
+    const response = await this.frontService.downloadByUrl(
+      `${reservation.id}-registerCard.pdf`,
+      __dirname,
+      authTokens,
+      rsrvRegisterCardDownloadURL,
+      rsrvRegisterCardPayload
+    );
+
+    let analyzerData = {
+      RFC: "",
+      fiscalName: "",
+      originalAmount: 0,
+    };
+
+    if (
+      response.status !== 200 &&
+      response.message !== "Report downloaded successfully"
+    ) {
+      console.log("Error downloading register card.");
+      return analyzerData;
+    }
+
+    const docPath = path.join(__dirname, reservation.id + "-registerCard.pdf");
+    const pdfText = await readPdfText({ url: docPath });
+
+    //TODO: Search for matches to found RFC
+    const RFCPattern =
+      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}/g;
+    const RFCMatch = pdfText.match(RFCPattern);
+    if (RFCMatch) {
+      analyzerData.RFC = RFCMatch[1];
+      analyzerData.fiscalName = reservation.company;
+    }
+
+    return analyzerData;
+  }
+
+  async initSystemInvoiceSuggest(reservation: Reservation): Promise<void> {
+    //TODO: Search for reservation's register card content to found attached RFC.
+    const registerCardAnalyzer = await this.registrationCardAnalyzer(
+      reservation.id
+    );
+    if (registerCardAnalyzer) {
+      console.log("Data found:");
+      console.log(registerCardAnalyzer);
+      //TODO: if active ledger balance === 0 continue with invoice & suggest
+      const createInvoiceRes = await this.createInvoice(
+        reservation.id,
+        registerCardAnalyzer
+      );
+
+      //TODO: if active ledger balance !== 0 search for expected payment & suggest
+    }
+  }
+
+  async invoiceAllDepartures(): Promise<any> {
     let pendingToInvoice = [];
     let errors = [];
-    for (let i = 0; i < departures.length; i++) {
+
+    for (let i = 0; i < this.departures.length; i++) {
       console.log(
-        `PROCESSING: ${departures[i].guestName} - ${departures[i].room} \n`
+        `\nInitializing invoice process: ${this.departures[i].guestName} - ${this.departures[i].room} \n`
       );
-      const ledgers = await getReservationLedgerList(departures[i].id);
+
+      const invoiceTypeList = [
+        {
+          type: "list",
+          name: "typeSelection",
+          choices: ["System suggestion", "Generic", "Skip"],
+        },
+      ];
+
+      const answer = await inquirer.prompt(invoiceTypeList);
+      const invoiceType = answer.typeSelection;
+
+      switch (invoiceType) {
+        case "System suggestion":
+          const systemSuggestionRes = await this.initSystemInvoiceSuggest(
+            this.departures[i]
+          );
+          break;
+        case "Generic":
+          break;
+        case "Skip":
+          break;
+        default:
+          break;
+      }
+
+      //TODO: Search for certificate & create invoce to certificate company.
+
+      //TODO: Search for RFC inside reservation's notes.
+
+      //TODO: Search for RFC manually via user input.
+
+      //TODO: SKIP
+
+      // const ledgers = await getReservationLedgerList(departures[i].id);
       // const emails = await getReservationContact(reservationId);
       // console.log(ledgers);
       // console.log(emails);
 
       //TODO: get current ledger
-      const currentLedger = ledgers.find((ledger) => ledger.status === "OPEN");
-      if (!currentLedger) {
-        console.log(
-          "Reservation's status is marked as CHECKOUT. Invoicing proccess will stop.\n"
-        );
-        errors.push(departures[i]);
-        continue;
-      }
+      // const currentLedger = ledgers.find((ledger) => ledger.status === "OPEN");
+      // if (!currentLedger) {
+      //   console.log(
+      //     "Reservation's status is marked as CHECKOUT. Invoicing proccess will stop.\n"
+      //   );
+      //   errors.push(departures[i]);
+      //   continue;
+      // }
 
       //TODO: Open a new ledger to close current ledger just in case there's 1 ledger or current is the last
-      const lastLedger = ledgers.reverse()[0];
-      if (
-        ledgers.length === 1 ||
-        lastLedger.ledgerNo === currentLedger.ledgerNo
-      ) {
-        await addNewLegder(departures[i].id);
-      }
+      // const lastLedger = ledgers.reverse()[0];
+      // if (
+      //   ledgers.length === 1 ||
+      //   lastLedger.ledgerNo === currentLedger.ledgerNo
+      // ) {
+      //   await addNewLegder(departures[i].id);
+      // }
 
-      if (currentLedger.balance !== 0) {
-        console.log(`Balance is not 0. Reservation was marked as pending.`);
-        pendingToInvoice.push(departures[i]);
-      } else {
-        //TODO: set current ledger status to CLOSED
-        console.log(`Closing current ledger...`);
-        const changeResponse = await changeLedgerStatus(
-          departures[i].id,
-          currentLedger.ledgerNo,
-          departures[i].status
-        );
+      // if (currentLedger.balance !== 0) {
+      //   console.log(`Balance is not 0. Reservation was marked as pending.`);
+      //   pendingToInvoice.push(departures[i]);
+      // } else {
+      //   //TODO: set current ledger status to CLOSED
+      //   console.log(`Closing current ledger...`);
+      //   const changeResponse = await changeLedgerStatus(
+      //     departures[i].id,
+      //     currentLedger.ledgerNo,
+      //     departures[i].status
+      //   );
 
-        // continue invoicer proccess
-      }
-
-      console.log("\n\n");
+      // continue invoicer proccess
     }
 
-    console.log("pendingToInvoice:");
-    console.log(pendingToInvoice);
-    console.log("\n");
-
-    console.log("ERRORS:");
-    console.log(errors);
-    console.log("\n");
-
-    return {
-      status: 200,
-      errors,
-      pendingToInvoice,
-    };
+    console.log("\n\n");
   }
 }

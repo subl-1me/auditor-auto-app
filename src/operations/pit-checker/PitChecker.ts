@@ -91,7 +91,7 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2024/03/04";
+    const todayDate = "2024/03/05";
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
