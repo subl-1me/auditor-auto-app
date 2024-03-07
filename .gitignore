@@ -5,3 +5,4 @@ auth.json
 src/config/config.json
 src/MenuManager.ts
 src/operations/printer/reports/
+src/operations/invoicer/pendingToInvoice.json

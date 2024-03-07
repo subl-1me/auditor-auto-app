@@ -3,6 +3,7 @@ import MenuStack from "../../MenuStack";
 import FrontService from "../../services/FrontService";
 import TokenStorage from "../../utils/TokenStorage";
 import inquirer from "inquirer";
+import fs from "fs/promises";
 import { readPdfText } from "pdf-text-reader";
 
 import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../../consts";
@@ -41,10 +42,12 @@ const RFCList = [
 export default class Invoicer {
   private frontService: FrontService;
   public departures: Reservation[];
+  public pendingToInvoice: Reservation[];
 
   constructor() {
     this.frontService = new FrontService();
     this.departures = [];
+    this.pendingToInvoice = [];
   }
 
   async performInvoicer(menuStack: MenuStack): Promise<any> {
@@ -571,7 +574,17 @@ export default class Invoicer {
     };
   }
 
+  private async skipReservationInvoice(reservation: Reservation): Promise<any> {
+    this.pendingToInvoice.push(reservation);
+
+    //save on local
+    const pendingReservationDir = path.join(__dirname, "pendingToInvoice.json");
+    const data = JSON.stringify(this.pendingToInvoice);
+    console.log(data);
+  }
+
   async invoiceAllDepartures(): Promise<any> {
+    //TODO: Search for pending reservations to invoice at first
     let pendingToInvoice = [];
     let errors = [];
 
@@ -605,6 +618,22 @@ export default class Invoicer {
           console.log(genericInvoiceRes);
           break;
         case "Skip":
+          console.log("Skipped");
+          this.pendingToInvoice.push(this.departures[i]);
+          const fileName = "pendingToInvoice.json";
+          const filePath = path.join(__dirname, fileName);
+
+          // get data & update
+          // const currentData = await fs.readFile(filePath, {
+          //   encoding: "utf-8",
+          // });
+
+          const data = JSON.stringify(this.pendingToInvoice);
+          await fs.writeFile(filePath, data, { encoding: "utf8" });
+          // const skipperRes = await this.skipReservationInvoice(
+          //   this.departures[i]
+          // );
+          // console.log(skipperRes);
           break;
         default:
           break;
