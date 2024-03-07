@@ -17,6 +17,7 @@ import {
   changeLedgerStatus,
   addNewLegder,
   reservationDataMatcher,
+  getReservationInvoiceList,
 } from "../../utils/reservationUtlis";
 
 import Ledger from "../../types/Ledger";
@@ -274,6 +275,17 @@ export default class Invoicer {
     isGeneric: boolean,
     RFCData?: any
   ): Promise<any> {
+    const currentReservation = this.departures.find(
+      (reservation) => reservation.id === reservationId
+    );
+
+    if (!currentReservation) {
+      console.log("Error trying to get reservation data");
+      return;
+    }
+
+    console.log("Getting current invoices..");
+    const activeInvoices = await getReservationInvoiceList(currentReservation);
     const ledgers = await getReservationLedgerList(reservationId);
     const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");
     const ledgerTargetNo = await this.askForLedger(ledgers);
@@ -604,6 +616,7 @@ export default class Invoicer {
       const answer = await inquirer.prompt(invoiceTypeList);
       const invoiceType = answer.typeSelection;
 
+      // console.log(`Getting reservation's invoice data...`);
       switch (invoiceType) {
         case "System suggestion":
           const systemSuggestionRes = await this.initSystemInvoiceSuggest(

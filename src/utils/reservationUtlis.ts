@@ -661,6 +661,7 @@ export async function getReservationInvoiceList(
   const invoiceEventMatch = invoicesTableMatch[0].match(
     invoiceEventHTMLElemPattern
   );
+
   if (!invoiceEventMatch || invoiceEventMatch.length === 0) {
     return [];
   }
@@ -687,7 +688,9 @@ export async function getReservationInvoiceList(
     }
 
     if (receptorRFC) {
-      const rfcResult = receptorRFC.match(/[A-Z]{3}\d{6}[A-Z]{2}\d/);
+      const rfcResult = receptorRFC.match(
+        /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}/g
+      );
       RFC = rfcResult ? rfcResult[0] : "";
     }
 
@@ -697,7 +700,19 @@ export async function getReservationInvoiceList(
     const receptorRFCName = receptorRFCNameResult
       ? receptorRFCNameResult[0]
       : null;
-    console.log(receptorRFCName);
+
+    const RFCNameMatch = receptorRFCName.match(/>(.*)</);
+    if (RFCNameMatch) {
+      RFCName = RFCNameMatch[0].replaceAll(">", "").replaceAll("<", "");
+    }
+
+    invoices.push({
+      ledgerNo,
+      status,
+      RFC,
+      RFCName,
+    });
+    // console.log(receptorRFCName);
     // if (receptorRFCName) {
     // }
   });
@@ -754,7 +769,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/03/05")
+    .replace("{appDateField}", "2024/03/06")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
