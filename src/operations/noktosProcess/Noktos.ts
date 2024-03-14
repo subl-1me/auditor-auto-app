@@ -60,7 +60,8 @@ export default class Noktos {
         console.log(`Room: ${reservation.room}`);
         // Get all reservation ledgers
         const ledgers = await reservationUtils.getReservationLedgerList(
-          reservation.id
+          reservation.id,
+          reservation.status
         );
         const currentLedger = ledgers.find(
           (ledger) => ledger.status === "OPEN"

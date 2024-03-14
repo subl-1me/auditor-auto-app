@@ -174,7 +174,8 @@ export default class Utils {
     }
 
     const ledgerList = await ReservationUtils.getReservationLedgerList(
-      rsrvParent.id
+      rsrvParent.id,
+      rsrvParent.status
     );
     if (!ledgerList || ledgerList.length === 0) {
       console.log(`Ledger list not found for parent: ${parent}`);

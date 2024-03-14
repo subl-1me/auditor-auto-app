@@ -6,3 +6,5 @@ src/config/config.json
 src/MenuManager.ts
 src/operations/printer/reports/
 src/operations/invoicer/pendingToInvoice.json
+src/operations/invoicer/*-registerCard.pdf
+src/operations/invoicer/genericList.txt

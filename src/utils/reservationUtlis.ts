@@ -129,7 +129,10 @@ export async function compareReservationsToBeRouted(
   ledgerNo: Number
 ): Promise<any> {
   const parentTargetLedger = (
-    await getReservationLedgerList(primaryReservation.id)
+    await getReservationLedgerList(
+      primaryReservation.id,
+      primaryReservation.status
+    )
   ).find((ledger) => ledger.ledgerNo === ledgerNo);
 
   if (!parentTargetLedger) {
@@ -405,7 +408,8 @@ export async function analyzeDoc(doc: GuaranteeDoc): Promise<any> {
 }
 
 export async function getReservationLedgerList(
-  reservationId: string
+  reservationId: string,
+  status: string
 ): Promise<Ledger[]> {
   if (!FRONT_API_RSRV_FOLIOS) {
     throw new Error("Endpoint cannot be undefined");
@@ -428,32 +432,83 @@ export async function getReservationLedgerList(
   }
 
   // map items
+  // const reservations = await getReservationList(IN_HOUSE_FILTER);
+  // const currentReservation = reservations.find(
+  //   (reservation) => reservation.id === reservationId
+  // );
+
+  // if (!currentReservation) {
+  //   console.log("Error trying to find reservation data");
+  //   return ledgerList;
+  // }
+
   let ledgerList: Ledger[] = [];
+  const activeInvoices = await getReservationInvoiceList(reservationId, status);
   for (const ledger of response) {
-    if (ledger.folioStatus === "OPEN") {
-      // only gets movements if sheet is open
-      const transactions = await getLedgerTransactions(
-        `${reservationId}.${ledger.numFolio}`
-      );
-      let balance = parseFloat(ledger.folioBalance.toString()).toFixed(2);
-      ledgerList.push({
-        ledgerNo: ledger.numFolio,
-        status: ledger.folioStatus,
-        balance: Number(balance),
-        isBalanceCredit: ledger.folioBalance < 0,
-        isCertificated: ledger.showCertificated,
-        transactions,
-      });
-    } else {
-      ledgerList.push({
-        ledgerNo: ledger.numFolio,
-        status: ledger.folioStatus,
-        balance: ledger.folioBalance | 0,
-        isBalanceCredit: ledger.folioBalance < 0,
-        isCertificated: ledger.showCertificated,
-        transactions: [],
-      });
-    }
+    const transactions = await getLedgerTransactions(
+      `${reservationId}.${ledger.numFolio}`
+    );
+    let balance = ledger.folioBalance
+      ? parseFloat(ledger.folioBalance.toString()).toFixed(2)
+      : 0;
+
+    let invoice = activeInvoices.find(
+      (invoice) => invoice.ledgerNo === ledger.numFolio
+    );
+    ledgerList.push({
+      ledgerNo: ledger.numFolio,
+      status: ledger.folioStatus,
+      balance: balance ? Number(balance) : 0,
+      isBalanceCredit: balance ? ledger.folioBalance < 0 : false,
+      transactions,
+      isInvoiced: invoice ? true : false,
+      invoice: invoice
+        ? {
+            ledgerNo: ledger.numFolio,
+            RFC: invoice.RFC,
+            RFCName: invoice.RFCName,
+            status: invoice.status,
+          }
+        : null,
+    });
+    // if (ledger.folioStatus === "OPEN") {
+    //   // only gets movements if sheet is open
+    //   const transactions = await getLedgerTransactions(
+    //     `${reservationId}.${ledger.numFolio}`
+    //   );
+    //   let balance = parseFloat(ledger.folioBalance.toString()).toFixed(2);
+    //   ledgerList.push({
+    //     ledgerNo: ledger.numFolio,
+    //     status: ledger.folioStatus,
+    //     balance: Number(balance),
+    //     isBalanceCredit: ledger.folioBalance < 0,
+    //     isCertificated: ledger.showCertificated,
+    //     transactions,
+    //     isInvoiced: false,
+    //     invoice: {
+    //       ledgerNo: ledger.numFolio,
+    //       RFC: "",
+    //       RFCName: "",
+    //       status: "",
+    //     },
+    //   });
+    // } else {
+    //   ledgerList.push({
+    //     ledgerNo: ledger.numFolio,
+    //     status: ledger.folioStatus,
+    //     balance: ledger.folioBalance | 0,
+    //     isBalanceCredit: ledger.folioBalance < 0,
+    //     isCertificated: ledger.showCertificated,
+    //     transactions: [],
+    //     isInvoiced: true,
+    //     invoice: {
+    //       ledgerNo: ledger.numFolio,
+    //       RFC: "",
+    //       RFCName: "",
+    //       status: "",
+    //     },
+    //   });
+    // }
   }
 
   return ledgerList;
@@ -507,22 +562,43 @@ export async function getReservationList(
 
   // map response items to Reservation interface
   let reservations: Reservation[] = [];
-  reservations = items
-    .map((item: any) => {
-      let id = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
-      let status = item.statusGuest.trim();
-      return {
-        id, // in this use case id must be an string because of API's requirements
-        guestName: item.nameGuest,
-        room: Number(item.room),
-        dateIn: item.dateIn,
-        dateOut: item.dateOut,
-        status,
-        company: item.company,
-        agency: item.agency,
-      };
-    })
-    .sort(sortRsrvByRoomNumber);
+  for (const item of items) {
+    // console.log(item);
+    let id = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
+    let status = item.statusGuest.trim();
+    // const ledgers = await getReservationLedgerList(id, status);
+    reservations.push({
+      id, // in this use case id must be an string because of API's requirements
+      guestName: item.nameGuest,
+      room: Number(item.room),
+      dateIn: item.dateIn,
+      dateOut: item.dateOut,
+      status,
+      company: item.company,
+      agency: item.agency,
+      ledgers: [],
+    });
+  }
+  reservations = reservations.sort(sortRsrvByRoomNumber);
+
+  // reservations = items
+  //   .map(async (item: any) => {
+  //     let id = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
+  //     let status = item.statusGuest.trim();
+  //     const ledgers = await getReservationLedgerList(id);
+  //     return {
+  //       id, // in this use case id must be an string because of API's requirements
+  //       guestName: item.nameGuest,
+  //       room: Number(item.room),
+  //       dateIn: item.dateIn,
+  //       dateOut: item.dateOut,
+  //       status,
+  //       company: item.company,
+  //       agency: item.agency,
+  //       ledgers,
+  //     };
+  //   })
+  //   .sort(sortRsrvByRoomNumber);
 
   return reservations;
 }
@@ -625,7 +701,8 @@ export async function getVirtualCard(
 }
 
 export async function getReservationInvoiceList(
-  reservation: Reservation
+  reservationId: string,
+  reservationStatus: string
 ): Promise<Invoice[]> {
   if (!FRONT_API_RSRV_INVOICES) {
     throw new Error("Endpoint cannot be undefined");
@@ -633,8 +710,8 @@ export async function getReservationInvoiceList(
 
   const _FRONT_API_RSRV_INVOICES = FRONT_API_RSRV_INVOICES.replace(
     "{rsrvIdField}",
-    reservation.id
-  ).replace("{rsrvStatusField}", reservation.status);
+    reservationId
+  ).replace("{rsrvStatusField}", reservationStatus);
 
   const authTokens = await TokenStorage.getData();
   if (!authTokens) {
@@ -716,8 +793,6 @@ export async function getReservationInvoiceList(
     // if (receptorRFCName) {
     // }
   });
-
-  console.log(invoices);
   return invoices;
 }
 
@@ -769,7 +844,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/03/06")
+    .replace("{appDateField}", "2024/03/13")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

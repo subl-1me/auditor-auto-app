@@ -1,3 +1,5 @@
+import Ledger from "./Ledger";
+
 export default interface Reservation {
   id: string;
   guestName: string;
@@ -7,4 +9,5 @@ export default interface Reservation {
   status: string;
   company: string;
   agency: string;
+  ledgers: Ledger[];
 }

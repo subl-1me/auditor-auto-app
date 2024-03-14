@@ -91,7 +91,7 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2024/03/06";
+    const todayDate = "2024/03/13";
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
@@ -109,7 +109,10 @@ export default class PITChecker {
 
     for (const reservation of reservations) {
       // if (reservation.room !== 623) continue;
-      const ledgers = await getReservationLedgerList(reservation.id);
+      const ledgers = await getReservationLedgerList(
+        reservation.id,
+        reservation.status
+      );
       console.log(`Checking room: ${reservation.room}...`);
 
       // search a open ledger with transactions in

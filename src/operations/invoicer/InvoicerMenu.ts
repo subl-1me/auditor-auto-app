@@ -12,6 +12,8 @@ export default class InvoicerMenu {
         choices: [
           "Invoice all departures",
           "Invoice by room",
+          "Resume skipped",
+          "Set generic list",
           new inquirer.Separator(),
           "Return",
         ],
