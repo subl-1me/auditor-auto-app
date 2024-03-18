@@ -844,7 +844,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/03/13")
+    .replace("{appDateField}", "2024/03/17")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

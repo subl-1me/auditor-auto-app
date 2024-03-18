@@ -3,4 +3,5 @@ export default interface Invoice {
   RFC: string;
   RFCName: string;
   status: string;
+  downloadUrl?: string;
 }
