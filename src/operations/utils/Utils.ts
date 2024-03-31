@@ -52,20 +52,14 @@ export default class Utils {
           );
           console.log(res);
         } else {
-          if (routingDiff < -10 || routingDiff > 10) {
-            console.log(
-              `There's a payment difference up to limit (10). Routing no able to proccess.`
-            );
-          } else {
-            console.log("Diff OK. Creating routing...");
-            const res = await ReservationUtils.createReservationRouting(
-              rsrvParent,
-              childs,
-              ledgerNoTarget,
-              reservationToProcess
-            );
-            console.log(res);
-          }
+          console.log("Creating routing...");
+          const res = await ReservationUtils.createReservationRouting(
+            rsrvParent,
+            childs,
+            ledgerNoTarget,
+            reservationToProcess
+          );
+          console.log(res);
         }
 
         break;

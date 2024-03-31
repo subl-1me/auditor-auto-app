@@ -20,21 +20,19 @@ import {
   PRE_INVOICED,
   INVOICED,
   VIRTUAL_CARD_PROVIDERS,
-  guaranteeDocPatterns,
-  ACCESS_PROVIDER,
-  NOKTS_PROVIDER,
-  VECI_PROVIDER,
   BANNED_COUPON_CONTENTS,
-  CTS_PROVIDER,
-  GBT_PROVIDER,
+  EXPEDIA,
+  BOOKING,
 } from "../consts";
 
 import {
   invoiceEventHTMLElemPattern,
   invoiceReceptorRFCPattern,
   invoiceReceptorNamePattern,
+  VCCPatternsList,
 } from "../patterns";
 import path from "path";
+import VCC from "../types/VCC";
 
 const frontService = new FrontService();
 const {
@@ -59,6 +57,9 @@ const {
   FRONT_API_RESERVATION_NOTES,
   FRONT_API_ROUTING_SAVE,
   FRONT_API_RATE_DESCRIPTION,
+  FRONT_API_APPLY_VCC_PAYMENT,
+  FRONT_API_GET_ECOMMERCE_INFO,
+  FRONT_API_CREATE_PAYMENT,
 } = process.env;
 
 export async function getReservationCertificate(
@@ -657,6 +658,182 @@ export async function getReservationNotes(
   return notes;
 }
 
+export async function applyVCCPayment(
+  reservationId: string,
+  VCC: VCC,
+  ledger: Ledger
+): Promise<any> {
+  // get VCC trans code
+  console.log(`Applying payment on ledger no. ${ledger.ledgerNo}`);
+
+  if (!VCC.provider) {
+    return {
+      status: 400,
+      message: "No VCC found.",
+    };
+  }
+
+  if (VCC.amount === 0 || !VCC.amount) {
+    return {
+      error: true,
+      message: `Invalid VCC amount (${VCC.amount})`,
+    };
+  }
+
+  // post
+  let ecommercePaymentPayload = {
+    transCode: VCC.type,
+    cardNum: "",
+    month: 0,
+    year: 0,
+    secNum: "",
+    titular: "",
+    auth: "",
+    notes: "",
+    guestCode: reservationId,
+    requerido: "",
+    folio: `${reservationId}.${ledger.ledgerNo}`,
+    amount: VCC.amount.toString(),
+    currency: "MXN",
+    propCode: "CECJS",
+    user: "HTJUGALDEA",
+    postID: 0,
+    savePayment: false,
+    binId: "",
+    ledgerX1: "",
+    ledgerX7: "",
+    ledgerX8: "",
+    refSmart: "",
+    depTercero: "",
+    depBoveda: false,
+    depSmart: false,
+    pinPad: "",
+    pinParam: "",
+    signature: "",
+    smartId: "0",
+  };
+
+  const authTokens = await TokenStorage.getData();
+  const applyPaymentRes = await frontService.postRequest(
+    ecommercePaymentPayload,
+    FRONT_API_APPLY_VCC_PAYMENT || "",
+    authTokens
+  );
+  console.log(applyPaymentRes);
+
+  if (VCC.provider === EXPEDIA) {
+    // apply provider tax
+    let pendingBalance = Number(ledger.balance) - Number(VCC.amount);
+    let providerTaxPaymentPayload = {
+      transCode: "TVIRT",
+      cardNum: "",
+      month: 0,
+      year: 0,
+      secNum: "",
+      titular: "",
+      auth: "",
+      notes: "",
+      guestCode: reservationId,
+      requerido: "",
+      folio: `${reservationId}.${ledger.ledgerNo}`,
+      amount: pendingBalance,
+      currency: "MXN",
+      propCode: "CECJS",
+      user: "HTJUGALDEA",
+      postID: 0,
+      savePayment: false,
+      binId: "",
+      ledgerX1: "",
+      ledgerX7: "",
+      ledgerX8: "",
+      refSmart: "",
+      depTercero: "",
+      depBoveda: false,
+      depSmart: false,
+      pinPad: "",
+      pinParam: "",
+      signature: "",
+      smartId: "0",
+    };
+
+    const applyPaymentRes = await frontService.postRequest(
+      providerTaxPaymentPayload,
+      FRONT_API_CREATE_PAYMENT || "",
+      authTokens
+    );
+
+    console.log(applyPaymentRes);
+  }
+
+  return {
+    error: false,
+    mesage: "VCC payment created",
+  };
+}
+
+export async function getEcommerceInfo(reservationId: string): Promise<any> {
+  const ecommercePayload = {
+    propCode: "CECJS",
+    esAnticipo: false,
+    esPMRES: false,
+    showCXC: "true",
+    mode: "E",
+    rsrvCode: reservationId,
+    excluyeVirtuales: true,
+  };
+
+  const authTokens = await TokenStorage.getData();
+  const ecommerceResponse = await frontService.postRequest(
+    ecommercePayload,
+    FRONT_API_GET_ECOMMERCE_INFO || "",
+    authTokens
+  );
+
+  if (ecommerceResponse.data.length === 0) {
+    return null;
+  }
+
+  return ecommerceResponse.data.length > 1
+    ? ecommerceResponse.data[1]
+    : ecommerceResponse.data[0];
+}
+
+export async function getReservationVCC(reservationId: string): Promise<any> {
+  const notes = await getReservationNotes(reservationId);
+  const concatenatedNote = notes
+    .reduce((accum, current) => {
+      return (accum += current.text + " ");
+    }, "")
+    .toUpperCase();
+
+  const VCCProvidersNames = Object.keys(VCCPatternsList);
+  let VCC: VCC = {
+    provider: null,
+    amount: 0,
+  };
+
+  for (const provider of VCCProvidersNames) {
+    const providerPatterns = VCCPatternsList[provider];
+    const match = concatenatedNote.match(providerPatterns.amountPattern);
+    if (match) {
+      const ecommerceInfo = await getEcommerceInfo(reservationId);
+      if (!ecommerceInfo) {
+        return VCC;
+      }
+
+      const VCCAmount = match[0].match(/\d+\.\d+/)
+        ? Number(match[0].match(/\d+\.\d+/)[0])
+        : 0;
+
+      VCC.amount = VCCAmount;
+      VCC.provider = provider;
+      VCC.type = ecommerceInfo.transCode;
+    }
+  }
+
+  return VCC;
+}
+
 export async function getVirtualCard(
   reservationId: string,
   rateCode: string,
@@ -665,7 +842,6 @@ export async function getVirtualCard(
   const notes = await getReservationNotes(reservationId);
   // const VIRTUAL_CREDIT_CARD_MSG = "Virtual Credit Card";
   const virtualCardAmountPattern = /MXN \d+\.\d+/;
-
   const hasVirtualCardAmount = notes.find((note: any) => {
     if (note.text) {
       return note.text.match(virtualCardAmountPattern);
@@ -844,7 +1020,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/03/17")
+    .replace("{appDateField}", "2024/03/29")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
@@ -1194,7 +1370,7 @@ export async function initializeLedgerInvoice(
 
 export async function changeLedgerStatus(
   reservationId: string,
-  ledgerNo: number,
+  ledgerNo: Number | number,
   reservationStatus: string
 ): Promise<any> {
   if (!FRONT_API_RSRV_CHANGE_LEDGER_STATUS) {

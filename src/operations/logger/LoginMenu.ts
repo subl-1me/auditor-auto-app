@@ -18,7 +18,7 @@ export default class Login {
     // const answers = await inquirer.prompt(questions);
     return {
       username: "HTJUGALDEA",
-      password: "qWERTY666-",
+      password: "qWERTY777*",
     };
   }
 }
