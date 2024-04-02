@@ -28,7 +28,7 @@ export default class FrontService {
    * @param {string} endpoint API URL
    */
   async postRequest(
-    formData: FormData | Object | JSON,
+    formData: FormData | Object | JSON | undefined,
     endpoint: string,
     authentication?: any
   ): Promise<any> {

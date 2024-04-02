@@ -11,6 +11,11 @@ export const PRE_INVOICED = "PreFactura";
 export const EXPEDIA = "EXPEDIA";
 export const BOOKING = "BOOKING";
 
+// Coupon providers
+export const ACCESS = "CUPÓN ACCESS";
+export const GTB = "GTB TRAVEL SERVICES MEXICO";
+export const CTS = "CORPORATE TRAVEL SERVICES WORLDWIDE";
+
 //  Principal-Menu skeleton
 export const HOME_MENU_OPERATION_NAMES = [
   "Login",

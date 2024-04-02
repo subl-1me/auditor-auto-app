@@ -719,7 +719,10 @@ export async function applyVCCPayment(
     FRONT_API_APPLY_VCC_PAYMENT || "",
     authTokens
   );
-  console.log(applyPaymentRes);
+  if (!applyPaymentRes.data.sucess) {
+    console.log("Error applying VCC eccomerce payment");
+    throw new Error(applyPaymentRes.data.errors);
+  }
 
   if (VCC.provider === EXPEDIA) {
     // apply provider tax
@@ -762,12 +765,15 @@ export async function applyVCCPayment(
       authTokens
     );
 
-    console.log(applyPaymentRes);
+    if (!applyPaymentRes.data.sucess) {
+      console.log("Error applying provider TAX payment");
+      throw new Error(applyPaymentRes.errors);
+    }
   }
 
   return {
     error: false,
-    mesage: "VCC payment created",
+    mesage: "VCC payment created.",
   };
 }
 
@@ -816,6 +822,7 @@ export async function getReservationVCC(reservationId: string): Promise<any> {
     const providerPatterns = VCCPatternsList[provider];
     const match = concatenatedNote.match(providerPatterns.amountPattern);
     if (match) {
+      // Get commerce info to complete payment payload
       const ecommerceInfo = await getEcommerceInfo(reservationId);
       if (!ecommerceInfo) {
         return VCC;
@@ -1020,7 +1027,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/03/29")
+    .replace("{appDateField}", "2024/03/31")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

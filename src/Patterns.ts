@@ -1,4 +1,4 @@
-import { couponPatternsI } from "./types/couponPatterns";
+import { couponPatterns } from "./types/couponPatterns";
 import { VCCPatterns } from "./types/VCCPatterns";
 
 // Sheets
@@ -47,30 +47,34 @@ export const VECI_PROVIDER = "VECI";
 export const CTS_PROVIDER = "CTS";
 export const GBT_PROVIDER = "GBT";
 
-export const couponPatternsList = {
+export const couponPatternsList: couponPatterns = {
   couponAccess: {
     primaryIdentificator: /cupón access/,
-    reservationIdTarget: new RegExp(`clave de conﬁrmación \\d+`),
+    reservationIdTargetSentence: new RegExp(`clave de conﬁrmación \\d+`),
+    reservationId: /\d+/,
     rfcPattern:
-      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}/g,
+      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}/g,
     dateInPattern: new RegExp(`\\d+\\-\\d+\\-\\d+`, "g"),
     dateOutPattern: new RegExp(`fecha de salida \\d+\\-\\d+\\-\\d+`),
   },
   couponGBT: {
     primaryIdentificator: /gbt travel services mexico/,
-    reservationIdTarget: new RegExp(`clave de conﬁrmación(.*)\d+`),
-    rfcPattern:
-      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}/g,
-    dateInPattern: new RegExp(`\\$\\d+\\,\\d+\\.\\d+`),
+    reservationIdTargetSentence: new RegExp(`confirmado por:(.*)\\d+`),
+    reservationId: /\d+/,
+    rfcPattern: /.{3}-\d+-.{2}\d/g,
+    dateInPattern: new RegExp(`\\d+\\-\\d+\\-\\d+`, "g"),
     dateOutPattern: new RegExp(`\\$\\d+\\,\\d+\\.\\d+`),
+    bothDatesPattern: /del(.*)\d+-(.*)-\d+(.*)al(.*)\d+-(.*)-\d+/,
   },
   couponCTS: {
     primaryIdentificator: /corporate travel services worldwide/,
-    reservationIdTarget: /Clave(.*)\d+/,
+    reservationIdTargetSentence: /clave(.*)\d+/,
+    reservationId: /\d+/,
+    //CTS160922QLA
     rfcPattern:
-      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}/g,
-    dateInPattern: /\d+\/\d+\/\d+/,
-    dateOutPattern: /\d+\/\d+\/\d+/,
+      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
+    dateInPattern: /\d+\/\d+\/\d+/g,
+    dateOutPattern: /\d+\/\d+\/\d+/g,
   },
   // couponVCI: {
   //   primaryIdentificator: "viajes eci",
