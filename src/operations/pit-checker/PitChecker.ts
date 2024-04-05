@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import {
   getReservationList,
   getReservationLedgerList,
@@ -7,6 +10,7 @@ import {
   getReservationRoutings,
   getReservationCertificate,
   getVirtualCard,
+  getReservationVCC,
 } from "../../utils/reservationUtlis";
 import { IN_HOUSE_FILTER } from "../../consts";
 
@@ -15,9 +19,19 @@ import Transaction from "../../types/Transaction";
 import { Rate } from "../../types/RateDetails";
 import Ledger from "../../types/Ledger";
 import Router from "../../types/Router";
+import DocAnalyzer from "../../DocAnalyzer";
+import FrontService from "../../services/FrontService";
+import TokenStorage from "../../utils/TokenStorage";
+import { TempStorage } from "../../utils/TempStorage";
+import path from "path";
+
+const { STORAGE_TEMP_PATH } = process.env;
 
 export default class PITChecker {
-  constructor() {}
+  private frontService: FrontService;
+  constructor() {
+    this.frontService = new FrontService();
+  }
 
   /**
    * @description It gets all the charges and payments sums
@@ -44,35 +58,6 @@ export default class PITChecker {
     return { chargesSum, paymentsSum };
   }
 
-  /**
-   * @description It checks if tonight rate is covered by the payments sum
-   * @param todayRateAmount Today rate with tax
-   * @param paymentsSum Guest's payments sum
-   */
-  private isTonightPaid(todayRateAmount: number, paymentsSum: number): boolean {
-    return paymentsSum >= todayRateAmount;
-  }
-
-  /**
-   * @description Compares payments sum to reservation total amount
-   * @param totalToPay Reservation's total amount
-   * @param paymentsSum Guest's payments sum
-   * @returns
-   */
-  private isTotalPaid(totalToPay: number, paymentsSum: number): boolean {
-    return totalToPay === paymentsSum;
-  }
-
-  /**
-   * @description It calculates the total of nights that the payment sum covers.
-   * @param rates
-   * @param transactions
-   * @returns Total nights paid
-   */
-  private calculateNightsPaid(rates: Rate, transactions: Transaction): number {
-    return 0;
-  }
-
   async analyzeLedgers(
     ledgers: Ledger[],
     rates: Rate[],
@@ -91,7 +76,9 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2024/03/31";
+    const todayDate = "2024/04/04";
+    const authTokens = await TokenStorage.getData();
+    const tempStorage = new TempStorage();
     // get rsrv and filter today departures for better performing
     const reservations: Reservation[] = items
       .filter((reservation) => !reservation.company.includes("NOKTOS"))
@@ -108,12 +95,107 @@ export default class PITChecker {
     let rsrvWithVirtualCard: any[] = [];
 
     for (const reservation of reservations) {
+      console.log(`Checking room: ${reservation.room}...`);
       // if (reservation.room !== 623) continue;
+      const certificateId = await getReservationCertificate(reservation.id);
+      if (certificateId) {
+        console.log("This reservation has a certificate.");
+        rsrvWithCertificate.push({
+          room: reservation.room,
+          certificateId,
+        });
+        await tempStorage.writeChecked({
+          id: reservation.id,
+          hasCoupon: false,
+          hasCertificate: true,
+          hasVCC: false,
+          checkAgain: false,
+          dateOut: reservation.dateOut,
+        });
+        console.log("\n");
+        continue;
+      }
+
+      const guaranteeDocs = await getReservationGuaranteeDocs(reservation.id);
+      if (guaranteeDocs.length > 0) {
+        const document = guaranteeDocs[0];
+        console.log("This reservation has guarantee docs.");
+        const fileName = `doc-${reservation.id}.pdf`;
+        const fileDir = path.join(STORAGE_TEMP_PATH || "", "docsToAnalyze");
+        const fileDownloader = await this.frontService.downloadByUrl(
+          fileName,
+          fileDir,
+          authTokens,
+          document.downloadUrl
+        );
+        if (fileDownloader.status !== 200) {
+          console.log("Error trying to download document file.");
+          continue;
+        }
+        const analyzerResult = await DocAnalyzer.init(
+          fileDownloader.filePath,
+          reservation
+        );
+        if (analyzerResult.error) {
+          console.log(analyzerResult.message);
+          rsrvPendingToCheck.push({
+            room: reservation.room,
+            error: analyzerResult.message,
+          });
+          const deleteFileRes = await tempStorage.deleteTempDoc(
+            fileDownloader.filePath
+          );
+          continue;
+        }
+
+        await tempStorage.writeChecked({
+          id: reservation.id,
+          hasCoupon: true,
+          hasCertificate: false,
+          hasVCC: false,
+          checkAgain: false,
+          dateOut: reservation.dateOut,
+        });
+
+        console.log("Coupon approved.");
+        console.log(analyzerResult.data);
+        rsrvComplete.push({
+          room: reservation.room,
+          data: analyzerResult.data,
+        });
+
+        console.log("\n");
+        const deleteFileRes = await tempStorage.deleteTempDoc(
+          fileDownloader.filePath
+        );
+        // const deleteFileRes = await tempStorage.deleteTempDoc(filePath);
+        continue;
+      }
+
+      const VCC = await getReservationVCC(reservation.id);
+      if (VCC.provider) {
+        console.log("This reservation is already paid by Credit Virtual Card.");
+        console.log(VCC);
+        rsrvWithVirtualCard.push({
+          room: reservation.room,
+          VCC,
+        });
+        await tempStorage.writeChecked({
+          id: reservation.id,
+          hasCoupon: false,
+          hasCertificate: false,
+          hasVCC: true,
+          checkAgain: false,
+          dateOut: reservation.dateOut,
+        });
+        console.log("\n");
+        continue;
+      }
+
       const ledgers = await getReservationLedgerList(
         reservation.id,
         reservation.status
       );
-      console.log(`Checking room: ${reservation.room}...`);
 
       // search a open ledger with transactions in
       const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");
@@ -140,62 +222,7 @@ export default class PITChecker {
       }
 
       const sums = this.getTransactionsSum(activeLedger.transactions);
-
       const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-      const certificateId = await getReservationCertificate(reservation.id);
-      if (certificateId) {
-        console.log("This reservation has a certificate.");
-        console.log("\n");
-        rsrvWithCertificate.push({
-          room: reservation.room,
-          certificateId,
-        });
-        continue;
-      }
-
-      const guaranteeDocs = await getReservationGuaranteeDocs(reservation.id);
-      if (guaranteeDocs.length > 0) {
-        console.log("This reservation has guarantee docs.");
-        console.log("\n");
-        rsrvComplete.push({
-          room: reservation.room,
-          docs: guaranteeDocs,
-        });
-        continue;
-      }
-
-      const virtualCard = await getVirtualCard(
-        reservation.id,
-        todayRate.code,
-        todayDate
-      );
-      if (virtualCard) {
-        const { amount } = virtualCard;
-        if (amount !== 0 || amount !== null) {
-          console.log(
-            `This reservation has a Virtual Credit Card - $${amount}\n`
-          );
-
-          if (total !== amount) {
-            console.log(
-              "Virtual Card balance doesnt match with reservation total.\n"
-            );
-          } else {
-            console.log("OK!\n");
-          }
-
-          rsrvWithVirtualCard.push({
-            room: reservation.room,
-            type: virtualCard.type,
-            balanceMatch: total === amount,
-            reservationTotal: total,
-            virtualCardBalance: amount,
-            diff: Number(total - amount),
-          });
-          continue;
-        }
-      }
-
       const routings = await getReservationRoutings(reservation.id);
       if (routings.length !== 0) {
         if (routings.isParent) {

@@ -721,53 +721,29 @@ export async function applyVCCPayment(
   );
   if (!applyPaymentRes.data.sucess) {
     console.log("Error applying VCC eccomerce payment");
-    throw new Error(applyPaymentRes.data.errors);
+    return {
+      error: true,
+      message: applyPaymentRes.data.errors,
+    };
   }
 
   if (VCC.provider === EXPEDIA) {
     // apply provider tax
-    let pendingBalance = Number(ledger.balance) - Number(VCC.amount);
-    let providerTaxPaymentPayload = {
-      transCode: "TVIRT",
-      cardNum: "",
-      month: 0,
-      year: 0,
-      secNum: "",
-      titular: "",
-      auth: "",
-      notes: "",
-      guestCode: reservationId,
-      requerido: "",
-      folio: `${reservationId}.${ledger.ledgerNo}`,
+    const pendingBalance = Number(ledger.balance) - Number(VCC.amount);
+    const payment: Payment = {
+      type: "TVIRT",
       amount: pendingBalance,
-      currency: "MXN",
-      propCode: "CECJS",
-      user: "HTJUGALDEA",
-      postID: 0,
-      savePayment: false,
-      binId: "",
-      ledgerX1: "",
-      ledgerX7: "",
-      ledgerX8: "",
-      refSmart: "",
-      depTercero: "",
-      depBoveda: false,
-      depSmart: false,
-      pinPad: "",
-      pinParam: "",
-      signature: "",
-      smartId: "0",
+      reservationId: reservationId,
+      reservationCode: `${reservationId}.${ledger.ledgerNo}`,
     };
 
-    const applyPaymentRes = await frontService.postRequest(
-      providerTaxPaymentPayload,
-      FRONT_API_CREATE_PAYMENT || "",
-      authTokens
-    );
-
-    if (!applyPaymentRes.data.sucess) {
+    const taxPaymentRes = await addNewPayment(payment);
+    if (!taxPaymentRes.data.sucess) {
       console.log("Error applying provider TAX payment");
-      throw new Error(applyPaymentRes.errors);
+      return {
+        error: true,
+        message: "Error trying to apply provider TAX payment.",
+      };
     }
   }
 
@@ -804,7 +780,7 @@ export async function getEcommerceInfo(reservationId: string): Promise<any> {
     : ecommerceResponse.data[0];
 }
 
-export async function getReservationVCC(reservationId: string): Promise<any> {
+export async function getReservationVCC(reservationId: string): Promise<VCC> {
   const notes = await getReservationNotes(reservationId);
   const concatenatedNote = notes
     .reduce((accum, current) => {
@@ -839,48 +815,6 @@ export async function getReservationVCC(reservationId: string): Promise<any> {
   }
 
   return VCC;
-}
-
-export async function getVirtualCard(
-  reservationId: string,
-  rateCode: string,
-  appDate: string
-): Promise<any> {
-  const notes = await getReservationNotes(reservationId);
-  // const VIRTUAL_CREDIT_CARD_MSG = "Virtual Credit Card";
-  const virtualCardAmountPattern = /MXN \d+\.\d+/;
-  const hasVirtualCardAmount = notes.find((note: any) => {
-    if (note.text) {
-      return note.text.match(virtualCardAmountPattern);
-    }
-  });
-
-  if (!hasVirtualCardAmount) {
-    return null;
-  }
-
-  const amountMatch = hasVirtualCardAmount.text.match(/\d+\.\d+/);
-  if (!amountMatch) {
-    return { type: "Unknown", amount: 0 };
-  }
-
-  //TODO: Get Virtual Card type
-  const rateDescription = await GetReservationRateDescription(
-    reservationId,
-    appDate,
-    rateCode
-  );
-
-  VIRTUAL_CARD_PROVIDERS.forEach((type) => {
-    if (rateDescription.includes(type)) {
-      return {
-        type,
-        amount: Number(amountMatch[0]),
-      };
-    }
-  });
-
-  return { type: "Unknown", amount: Number(amountMatch[0]) };
 }
 
 export async function getReservationInvoiceList(
@@ -1027,7 +961,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/03/31")
+    .replace("{appDateField}", "2024/04/04")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
@@ -1178,17 +1112,42 @@ export async function addNewPayment(payment: Payment): Promise<any> {
     };
   }
 
-  const _FRONT_API_RSRV_NEW_PAYMENT = FRONT_API_RSRV_NEW_PAYMENT.replace(
-    "{pymntTypeField}",
-    payment.type
-  )
-    .replace("{rsrvIdField}", payment.reservationId)
-    .replace("{rsrvLedgerCodeField}", payment.reservationCode)
-    .replace("{ledgerBalance}", payment.amount.toString());
+  let newPaymentPayload = {
+    transCode: payment.type,
+    cardNum: "",
+    month: 0,
+    year: 0,
+    secNum: "",
+    titular: "",
+    auth: "",
+    notes: "",
+    guestCode: payment.reservationCode,
+    requerido: "",
+    folio: payment.reservationCode,
+    amount: payment.amount.toString(),
+    currency: "MXN",
+    propCode: "CECJS",
+    user: "HTJUGALDEA",
+    postID: 0,
+    savePayment: false,
+    binId: "",
+    ledgerX1: "",
+    ledgerX7: "",
+    ledgerX8: "",
+    refSmart: "",
+    depTercero: "",
+    depBoveda: false,
+    depSmart: false,
+    pinPad: "",
+    pinParam: "",
+    signature: "",
+    smartId: "0",
+  };
 
   const authTokens = await TokenStorage.getData();
-  const response = await frontService.getRequest(
-    _FRONT_API_RSRV_NEW_PAYMENT,
+  const response = await frontService.postRequest(
+    newPaymentPayload,
+    FRONT_API_RSRV_NEW_PAYMENT,
     authTokens
   );
 

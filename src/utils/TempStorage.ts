@@ -1,8 +1,10 @@
 import fsAsync from "fs/promises";
 import fs from "fs";
-import path, { parse } from "path";
+import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
+
+import ReservationChecked from "../types/ReservationChecked";
 
 const STORAGE_TEMP_PATH = process.env.STORAGE_TEMP_PATH || "";
 const INVOICES_QUEUE_FILENAME = path.join(
@@ -13,10 +15,29 @@ const PENDING_RESERVATIONS_PATH = path.join(
   STORAGE_TEMP_PATH,
   "pendingReservationsQueue.json"
 );
+const CHECKED_LIST_PATH = path.join(STORAGE_TEMP_PATH, "checkedList.json");
 const GENERIC_LIST_PATH = path.join(STORAGE_TEMP_PATH, "genericList.json");
 
 export class TempStorage {
   constructor() {}
+
+  async deleteTempDoc(filePath: string): Promise<any> {
+    try {
+      const deleteRes = await fsAsync.unlink(filePath);
+      console.log(deleteRes);
+    } catch (err: any) {
+      console.log(err);
+      return {
+        status: 400,
+        message: err.message,
+      };
+    }
+
+    return {
+      status: 200,
+      message: "File deleted.",
+    };
+  }
 
   private async createDefaultGenericList(): Promise<any> {
     try {
@@ -149,6 +170,65 @@ export class TempStorage {
       return {
         status: 400,
         message: err,
+      };
+    }
+  }
+
+  async writeChecked(reservation: ReservationChecked): Promise<any> {
+    if (!fs.existsSync(CHECKED_LIST_PATH)) {
+      await this.createDefaultCheckedList();
+    }
+
+    try {
+      const checkedList = await this.readChecked();
+      checkedList.checkedList.push(reservation);
+
+      await fsAsync.writeFile(
+        CHECKED_LIST_PATH,
+        JSON.stringify(checkedList),
+        "utf8"
+      );
+
+      return {
+        status: 200,
+        message: "File updated.",
+      };
+    } catch (err) {
+      console.log(err);
+      return [];
+    }
+  }
+
+  async readChecked(): Promise<any> {
+    try {
+      const jsonDataText = await fsAsync.readFile(CHECKED_LIST_PATH, "utf-8");
+      const jsonDataParsed = JSON.parse(jsonDataText);
+      return jsonDataParsed;
+    } catch (err) {
+      console.log(err);
+      return [];
+    }
+  }
+
+  private async createDefaultCheckedList(): Promise<any> {
+    try {
+      let defaultData = {
+        checkedList: [],
+      };
+
+      await fsAsync.writeFile(
+        CHECKED_LIST_PATH,
+        JSON.stringify(defaultData),
+        "utf8"
+      );
+
+      return {
+        status: 200,
+      };
+    } catch (err) {
+      return {
+        status: 400,
+        err,
       };
     }
   }

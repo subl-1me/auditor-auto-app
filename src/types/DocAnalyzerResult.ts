@@ -1,5 +1,5 @@
 export interface DocAnalyzerResult {
-  type: string;
+  provider: string;
   RFC: string;
   reservationTarget: string;
   dates: couponDates;

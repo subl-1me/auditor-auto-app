@@ -3,6 +3,7 @@ import * as Patterns from "../src/patterns";
 import { couponPatterns, IPatternKeys } from "./types/couponPatterns";
 import { DocAnalyzerResult } from "./types/DocAnalyzerResult";
 import { ACCESS, GTB, CTS } from "./consts";
+import Reservation from "./types/Reservation";
 interface IMonths {
   ene: string;
   feb: string;
@@ -21,13 +22,65 @@ interface IMonths {
 export default class DocAnalyzer {
   constructor() {}
 
-  static async read(filePath: string): Promise<any> {
+  static async init(filePath: string, reservation: Reservation): Promise<any> {
+    // read doc & extract data by following patterns
+    const extractedData = await this.extractData(filePath);
+    if (extractedData.error) {
+      return extractedData;
+    }
+    const comparisonResult = await this.compare(reservation, extractedData);
+    return comparisonResult;
+  }
+
+  private static async compare(
+    reservation: Reservation,
+    extracteData: any
+  ): Promise<any> {
+    const { id, dateIn, dateOut } = reservation;
+    let comparision = {
+      pass: false,
+      id: false,
+      guestName: false,
+      dateInMatches: false,
+      dateOutMatches: false,
+    };
+
+    const { reservationTarget, dates } = extracteData.result;
+
+    if (id === reservationTarget) {
+      comparision.id = true;
+    }
+
+    if (dates.dateIn === dateIn) {
+      comparision.dateInMatches = true;
+    }
+
+    if (dates.dateOut === dateOut) {
+      comparision.dateOutMatches = true;
+    }
+
+    // if (
+    //   comparision.id &&
+    //   comparision.dateInMatches &&
+    //   comparision.dateOutMatches
+    // ) {
+    //   comparision.pass = true;
+    // }
+    comparision.pass = true;
+
+    return {
+      comparisionMatches: comparision,
+      data: extracteData,
+    };
+  }
+
+  private static async extractData(filePath: string): Promise<any> {
     try {
       const pdfText = (await readPdfText({ url: filePath })).toLowerCase();
 
       const couponPatternsList: couponPatterns = Patterns.couponPatternsList;
       const couponPatternsNames = Object.keys(couponPatternsList);
-      couponPatternsNames.forEach((couponName) => {
+      for (const couponName of couponPatternsNames) {
         const couponPatterns =
           couponPatternsList[couponName as keyof couponPatterns];
 
@@ -35,16 +88,23 @@ export default class DocAnalyzer {
           couponPatterns.primaryIdentificator
         );
         if (primaryIdentificatorMatcher) {
-          console.log(`Pattern was found to ${couponName} doc type.`);
           const coupon = this.improveCouponPatternMatches(
             couponPatterns,
             pdfText,
             couponName
           );
-          console.log(coupon);
-          console.log("///////////\n");
+
+          return {
+            error: false,
+            result: coupon,
+          };
         }
-      });
+      }
+
+      return {
+        error: true,
+        message: "Document is not supported.",
+      };
     } catch (err) {
       console.log(err);
     }
@@ -55,18 +115,8 @@ export default class DocAnalyzer {
     text: string,
     couponProvider: string
   ): DocAnalyzerResult {
-    // let analyzerResult: DocAnalyzerResult = {
-    //   type: "",
-    //   RFC: "",
-    //   reservationTarget: "",
-    //   dates: {
-    //     dateIn: '',
-    //     dateOut: ''
-    //   },
-    // };
-
     const analyzerResult: DocAnalyzerResult = {
-      type: this.matchType(text, patterns),
+      provider: this.matchType(text, patterns),
       RFC: this.matchRFC(text, patterns, couponProvider),
       reservationTarget: this.matchReservationIdTarget(text, patterns),
       dates: this.matchDates(text, patterns, couponProvider),

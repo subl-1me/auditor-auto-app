@@ -7,6 +7,11 @@ import FrontService from "./src/services/FrontService";
 import TokenStorage from "./src/utils/TokenStorage";
 import DocAnalyzer from "./src/DocAnalyzer";
 import fs from "fs/promises";
+import { IN_HOUSE_FILTER } from "./src/consts";
+import dotenv from "dotenv";
+dotenv.config();
+
+const { STORAGE_TEMP_PATH } = process.env;
 
 async function main(): Promise<void> {
   const menuStack = new MenuStack();
@@ -57,6 +62,39 @@ async function main(): Promise<void> {
   //   // await DocAnalyzer.read(analyzerResult);
   // }
   // console.log(docToAnalyze);
+
+  // const reservations = await reservationUtils.getReservationList(
+  //   IN_HOUSE_FILTER
+  // );
+  // for (const reservation of reservations) {
+  //   const reservationDocuments =
+  //     await reservationUtils.getReservationGuaranteeDocs(reservation.id);
+  //   if (reservationDocuments.length === 0) {
+  //     continue;
+  //   }
+
+  //   console.log(
+  //     `Reading guarantee document from ${reservation.room} - ${reservation.guestName}`
+  //   );
+  //   const document = reservationDocuments[0];
+
+  //   // download document
+  //   // const authTokens = await TokenStorage.getData();
+  //   const fileDownloader = await frontService.downloadByUrl(
+  //     `docsToAnalyze/doc-${reservation.id}.pdf`,
+  //     STORAGE_TEMP_PATH || "",
+  //     authTokens,
+  //     document.downloadUrl
+  //   );
+
+  //   if (fileDownloader.status !== 200) {
+  //     throw new Error("Error downloading guarantee document.");
+  //   }
+
+  //   const docCheckerResults = await DocAnalyzer.read(fileDownloader.filePath);
+  //   console.log(docCheckerResults);
+  // }
+  // return;
 
   do {
     const currentMenu = menuStack.peek();
