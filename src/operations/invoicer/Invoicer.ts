@@ -24,7 +24,6 @@ import {
   addNewPayment,
   getReservationCertificate,
   getReservationRoutings,
-  getVirtualCard,
   getReservationRates,
   getReservationVCC,
   applyVCCPayment,
@@ -327,6 +326,11 @@ export default class Invoicer {
     // https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraFacturaV2
     // {'pComprobante':'17162851','pProp_Code':'CECJS','pFolio_code':'21453957.1','pGuest_code':'21453957','pFormat':'D','pNotas':'','pCurrency':'MXN','pUsoCFDI':'S01','pReceptorNameModified':'','pIdiom':'Spa' ,'pUser':''}
     // res:
+
+    const systemSuggestionRes = await this.initSystemInvoiceSuggest(
+      reservation
+    );
+    return;
 
     const invoiceTypeList = [
       {
@@ -767,11 +771,13 @@ export default class Invoicer {
     };
 
     const authTokens = await TokenStorage.getData();
+    const fileName = `${reservation.id}-register-card.pdf`;
+    const fileFir = path.join(STORAGE_TEMP_PATH || "docsToAnalyze");
     const rsrvRegisterCardDownloadURL =
       "https://front2go.cityexpress.com/F2goPMS/Portada/GetPdfRegistrationForm";
     const response = await this.frontService.downloadByUrl(
-      `${reservation.id}-registerCard.pdf`,
-      __dirname,
+      fileName,
+      fileFir,
       authTokens,
       rsrvRegisterCardDownloadURL,
       rsrvRegisterCardPayload
@@ -1170,10 +1176,9 @@ export default class Invoicer {
       }
 
       const VCC = await getReservationVCC(this.departures[i].id);
-      console.log(VCC);
-      if (!VCC.provider) {
-        console.log("No VCC found in this reservation.");
-      } else {
+      if (VCC) {
+        console.log("This reservation has a Virtua Credit Card:");
+        console.log(VCC);
         const ledgerTargetNo = await this.askForLedger(
           this.departures[i].ledgers
         );
@@ -1245,11 +1250,13 @@ export default class Invoicer {
         );
 
         if (analyzerResult.error) {
+          await tempStorage.deleteTempDoc(fileDownloader.filePath);
           return analyzerResult;
         }
 
         if (analyzerResult.comparisionMatches.pass) {
           // create invoice with recopiled information
+          await tempStorage.deleteTempDoc(fileDownloader.filePath);
           const { RFC } = analyzerResult.data;
 
           // Search for RFC, confirm & make invoice

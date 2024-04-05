@@ -728,7 +728,7 @@ export async function applyVCCPayment(
   }
 
   if (VCC.provider === EXPEDIA) {
-    // apply provider tax
+    // apply provider's tax
     const pendingBalance = Number(ledger.balance) - Number(VCC.amount);
     const payment: Payment = {
       type: "TVIRT",

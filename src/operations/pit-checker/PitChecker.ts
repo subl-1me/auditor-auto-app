@@ -4,12 +4,10 @@ dotenv.config();
 import {
   getReservationList,
   getReservationLedgerList,
-  getReservationRateCode,
   getReservationRates,
   getReservationGuaranteeDocs,
   getReservationRoutings,
   getReservationCertificate,
-  getVirtualCard,
   getReservationVCC,
 } from "../../utils/reservationUtlis";
 import { IN_HOUSE_FILTER } from "../../consts";
