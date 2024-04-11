@@ -92,6 +92,11 @@ export default class Utils {
         // console.log(docs);
 
         break;
+
+      case "Create routing to Virtual Folio":
+        const postingList = await ReservationUtils.getVirtualPostList();
+        console.log(postingList);
+        break;
       default:
         console.log("Invalid util operation");
         break;

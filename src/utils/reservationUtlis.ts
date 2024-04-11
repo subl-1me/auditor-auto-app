@@ -515,6 +515,67 @@ export async function getReservationLedgerList(
   return ledgerList;
 }
 
+export async function getVirtualPostList(): Promise<Reservation[]> {
+  const listOptions = {
+    pc: "KFwHWn911eaVeJhL++adWg==",
+    ph: false,
+    pn: "",
+    ci: "",
+    gpi: "",
+    ti: "",
+    rc: "",
+    rm: "",
+    fm: "",
+    to: "",
+    fq: "",
+    rs: "CHIN,NOSHOW,POST",
+    st: "EC",
+    grp: "",
+    gs: "",
+    sidx: "NameGuest",
+    sord: "asc",
+    rows: 120,
+    page: 1,
+    ss: false,
+    rcss: "",
+    user: "HTJUGALDEA",
+  };
+
+  const authTokens = TokenStorage.getData();
+  const response = await frontService.postRequest(
+    listOptions,
+    FRONT_API_RSRV_LIST || "",
+    authTokens
+  );
+
+  const { rows } = response.data;
+  const rowsFiltered = rows.filter(
+    (reservation: Reservation) => reservation.status === "POST      "
+  );
+  // map response items to Reservation interface
+  // let reservations: Reservation[] = [];
+  // for (const item of items) {
+  //   // console.log(item);
+  //   let id = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
+  //   let status = item.statusGuest.trim();
+  //   // const ledgers = await getReservationLedgerList(id, status);
+  //   reservations.push({
+  //     id, // in this use case id must be an string because of API's requirements
+  //     guestName: item.nameGuest,
+  //     room: Number(item.room),
+  //     dateIn: item.dateIn,
+  //     dateOut: item.dateOut,
+  //     status,
+  //     company: item.company,
+  //     agency: item.agency,
+  //     ledgers: [],
+  //   });
+  // }
+  // reservations = reservations.sort(sortRsrvByRoomNumber);
+
+  return rowsFiltered;
+}
+
 /**
  * @description Gets reservation list by following a status filter.
  * @param {string} status Condition to fetch list of reservation. See consts file to see usable filters.
@@ -732,12 +793,13 @@ export async function applyVCCPayment(
     const pendingBalance = Number(ledger.balance) - Number(VCC.amount);
     const payment: Payment = {
       type: "TVIRT",
-      amount: pendingBalance,
+      amount: Number(pendingBalance.toFixed(2)),
       reservationId: reservationId,
       reservationCode: `${reservationId}.${ledger.ledgerNo}`,
     };
 
     const taxPaymentRes = await addNewPayment(payment);
+    console.log(taxPaymentRes);
     if (!taxPaymentRes.data.sucess) {
       console.log("Error applying provider TAX payment");
       return {
@@ -781,6 +843,7 @@ export async function getEcommerceInfo(reservationId: string): Promise<any> {
 }
 
 export async function getReservationVCC(reservationId: string): Promise<VCC> {
+  // read notes to know what type of VCC it is
   const notes = await getReservationNotes(reservationId);
   const concatenatedNote = notes
     .reduce((accum, current) => {
@@ -801,6 +864,7 @@ export async function getReservationVCC(reservationId: string): Promise<VCC> {
       // Get commerce info to complete payment payload
       const ecommerceInfo = await getEcommerceInfo(reservationId);
       if (!ecommerceInfo) {
+        console.log("Error trying to get VCC ecommerce data.");
         return VCC;
       }
 
@@ -961,7 +1025,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/04/04")
+    .replace("{appDateField}", "2024/04/11")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
@@ -1021,8 +1085,10 @@ export async function getReservationGuaranteeDocs(
   if (scrappedDocs.length > 0) {
     docs = scrappedDocs.map((doc) => {
       let _FRONT_API_DOWNLOAD_DOC =
-        FRONT_API_DOWNLOAD_DOC?.replace("{docIdField}", doc.id) ||
-        "INVALID_URL";
+        FRONT_API_DOWNLOAD_DOC?.replace("{docIdField}", doc.id).replace(
+          "{rsrvIdField}",
+          reservationId
+        ) || "INVALID_URL";
       return {
         id: doc.id,
         type: doc.type,
@@ -1101,10 +1167,6 @@ export async function getReservationRoutings(
 }
 
 export async function addNewPayment(payment: Payment): Promise<any> {
-  if (!FRONT_API_RSRV_NEW_PAYMENT) {
-    throw new Error("Endpoint cannot be undefined");
-  }
-
   if (payment.amount === 0) {
     return {
       status: 400,
@@ -1121,7 +1183,7 @@ export async function addNewPayment(payment: Payment): Promise<any> {
     titular: "",
     auth: "",
     notes: "",
-    guestCode: payment.reservationCode,
+    guestCode: payment.reservationId,
     requerido: "",
     folio: payment.reservationCode,
     amount: payment.amount.toString(),
@@ -1147,7 +1209,7 @@ export async function addNewPayment(payment: Payment): Promise<any> {
   const authTokens = await TokenStorage.getData();
   const response = await frontService.postRequest(
     newPaymentPayload,
-    FRONT_API_RSRV_NEW_PAYMENT,
+    FRONT_API_CREATE_PAYMENT || "",
     authTokens
   );
 

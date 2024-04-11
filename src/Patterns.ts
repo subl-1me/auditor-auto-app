@@ -76,19 +76,15 @@ export const couponPatternsList: couponPatterns = {
     dateInPattern: /\d+\/\d+\/\d+/g,
     dateOutPattern: /\d+\/\d+\/\d+/g,
   },
-  // couponVCI: {
-  //   primaryIdentificator: "viajes eci",
-  //   confirmationIdPattern: new RegExp(`clave de conﬁrmación(.*)\d+`),
-  //   totalPattern: new RegExp(`\$\\d+\,\\d+\.\\d+`),
-
-  //   provider: VECI_PROVIDER,
-  //   guestName: "",
-  //   roomType: "",
-  //   dateInPattern: new RegExp(`\\$\\d+\\,\\d+\\.\\d+`),
-  //   dateOutPattern: new RegExp(`\\$\\d+\\,\\d+\\.\\d+`),
-  //   ratePerNight: 0,
-  //   placeDirection: "",
-  // },
+  couponVCI: {
+    primaryIdentificator: /viajes eci/,
+    reservationIdTargetSentence: new RegExp(`clave de conﬁrmación(.*)\d+`),
+    reservationId: /\d+/,
+    rfcPattern:
+      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
+    dateInPattern: new RegExp(`\\$\\d+\\,\\d+\\.\\d+`),
+    dateOutPattern: new RegExp(`\\$\\d+\\,\\d+\\.\\d+`),
+  },
 };
 
 // VCC patterns
@@ -98,5 +94,8 @@ export const VCCPatternsList: VCCPatterns = {
   },
   BOOKING: {
     amountPattern: /VCC AUTH MXN\d+\.\d+/,
+  },
+  AGODA: {
+    amountPattern: /-AUTH MXN\d+\.\d+/,
   },
 };

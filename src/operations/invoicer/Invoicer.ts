@@ -5,9 +5,10 @@ import TokenStorage from "../../utils/TokenStorage";
 import inquirer from "inquirer";
 import fs from "fs/promises";
 import { print } from "pdf-to-printer";
-import { readPdfText } from "pdf-text-reader";
+import { readPdfPages, readPdfText } from "pdf-text-reader";
 import { TempStorage } from "../../utils/TempStorage";
 import DocAnalyzer from "../../DocAnalyzer";
+import InvoiceResponse from "../../types/InvoiceResponse";
 
 import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../../consts";
 
@@ -36,6 +37,8 @@ import Scrapper from "../../Scrapper";
 import path from "path";
 import VCC from "../../types/VCC";
 import RFCReceptor from "../../types/RFCReceptor";
+import { Cipher } from "crypto";
+import GuaranteeDoc from "../../types/GuaranteeDoc";
 
 const {
   FRONT_API_RSRV_LIST,
@@ -43,9 +46,11 @@ const {
   FRONT_API_RSRV_ADD_NEW_LEDGER,
   FRONT_API_SEARCH_RFC,
   FRONT_API_RFC_INFO,
+  FRONT_API_SEND_INVOICE_EMAIL,
   INVOICES_TO_PRINT_PATH,
   PENDING_RESERVATIONS,
   STORAGE_TEMP_PATH,
+  FRONT_API_RSRV_DOWNLOAD_INVOICE,
 } = process.env;
 
 const RFCList = [
@@ -95,19 +100,24 @@ export default class Invoicer {
     switch (invoicerSelection) {
       // we send departures array in all methods to avoid multiple requests
       case "Invoice all departures":
-        invoicerResponse = await this.invoiceAllDepartures();
+        const lastRsrvIndex = this.departures.findIndex(
+          (reservation) => reservation.room === 523
+        );
 
-        if (invoicerResponse.status === 200) {
-          console.log("Printing previous invoices...");
-          const invoicesQueue = await tempStorage.readInvoicesQueue();
-          const queueRes = await this.startPrintInvoiceQueue(
-            invoicesQueue.invoicesQueue
-          );
-        }
+        invoicerResponse = await this.invoiceAllDepartures(
+          this.departures.slice(lastRsrvIndex, this.departures.length)
+        );
+        // if (invoicerResponse.status === 200) {
+        //   console.log("Printing previous invoices...");
+        //   const invoicesQueue = await tempStorage.readInvoicesQueue();
+        //   const queueRes = await this.startPrintInvoiceQueue(
+        //     invoicesQueue.invoicesQueue
+        //   );
+        // }
         break;
       case "Invoice by room":
         invoicerResponse = await this.invoiceByRoom();
-        const queueRes = await this.startPrintInvoiceQueue([invoicerResponse]);
+        // const queueRes = await this.startPrintInvoiceQueue([invoicerResponse]);
         break;
       case "Resume skipped":
         const pendingReservations = JSON.parse(
@@ -123,6 +133,46 @@ export default class Invoicer {
     }
 
     return invoicerResponse;
+  }
+
+  private async printInvoiceDoc(
+    invoiceResponse: InvoiceResponse
+  ): Promise<any> {
+    const filesDir = path.join(STORAGE_TEMP_PATH || "", "invoices");
+    const authTokens = await TokenStorage.getData();
+    const fileName = `invoice-${invoiceResponse.reservationId}.pdf`;
+
+    const downloaderPayload = {
+      comprobanteId: invoiceResponse.invoiceReceiptId,
+      type: "PDF",
+      user: "HTJUGALDEA",
+    };
+
+    const downloaderResponse = await this.frontService.downloadByUrl(
+      fileName,
+      filesDir,
+      authTokens,
+      FRONT_API_RSRV_DOWNLOAD_INVOICE || "",
+      downloaderPayload
+    );
+
+    if (downloaderResponse.status !== 200) {
+      console.log("Error trying to download invoice document.");
+      return downloaderResponse;
+    }
+
+    console.log(`Printing... ${downloaderResponse.filePath}`);
+    await print(downloaderResponse.filePath, {
+      side: "simplex",
+      scale: "fit",
+      orientation: "portrait",
+    });
+
+    return {
+      status: 200,
+      message: "File printed successfully.",
+      file: downloaderResponse.filePath,
+    };
   }
 
   private async startPrintInvoiceQueue(invoicesQueue: any): Promise<void> {
@@ -270,7 +320,7 @@ export default class Invoicer {
     // let invoiceData = {
     //   fiscalName: "",
     //   RFC: "",
-    // };
+    // };p
 
     // const authTokens = await TokenStorage.getData();
     // const rsrvRegisterCardDownloadURL =
@@ -327,10 +377,10 @@ export default class Invoicer {
     // {'pComprobante':'17162851','pProp_Code':'CECJS','pFolio_code':'21453957.1','pGuest_code':'21453957','pFormat':'D','pNotas':'','pCurrency':'MXN','pUsoCFDI':'S01','pReceptorNameModified':'','pIdiom':'Spa' ,'pUser':''}
     // res:
 
-    const systemSuggestionRes = await this.initSystemInvoiceSuggest(
-      reservation
-    );
-    return;
+    // const systemSuggestionRes = await this.initSystemInvoiceSuggest(
+    //   reservation
+    // );
+    // return;
 
     const invoiceTypeList = [
       {
@@ -435,6 +485,199 @@ export default class Invoicer {
     // console.log("Invoiced.");
   }
 
+  private async createInvoiceWithCoupon(
+    reservationId: string,
+    RFCData: any
+  ): Promise<any> {
+    const currentReservation = this.departures.find(
+      (reservation) => reservation.id === reservationId
+    );
+
+    if (!currentReservation) {
+      console.log("Error trying to get reservation data");
+      return;
+    }
+
+    // console.log("Getting current invoices..");
+    // const activeInvoices = await getReservationInvoiceList(
+    //   currentReservation.id,
+    //   currentReservation.status
+    // );
+    const ledgers = await getReservationLedgerList(
+      reservationId,
+      currentReservation.status
+    );
+    // const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");
+    const ledgerTargetNo = await this.askForLedger(ledgers);
+    const ledgerTarget = ledgers.find(
+      (ledger) => ledger.ledgerNo === Number(ledgerTargetNo)
+    );
+
+    if (!ledgerTarget) {
+      console.log(`Ledger not found.`);
+      return;
+    }
+
+    console.log(`Ledger no. ${ledgerTarget.ledgerNo}`);
+    console.log(`Balance. ${ledgerTarget.balance}`);
+    console.log(`Status. ${ledgerTarget.status}`);
+
+    console.log(
+      `Are you sure to continue with the following invoice information?`
+    );
+    console.log("----------");
+    console.log(`RFC: ${RFCData.receptorRfc}`);
+    console.log(`Name: ${RFCData.receptorNombre}`);
+    console.log(`Postal code: ${RFCData.receptorCpostal}`);
+    console.log(`Regimen: ${RFCData.receptorRegimen}`);
+    console.log("----------\n");
+    const confirmPrompt = [
+      {
+        type: "confirm",
+        name: "confirm",
+        message: "Is data correct?",
+      },
+    ];
+
+    const answer = await inquirer.prompt(confirmPrompt);
+    const confirm = answer.confirm;
+
+    if (!confirm) {
+      console.log("Skipped.\n");
+      return;
+    }
+
+    console.log("Applying CXC payment...");
+    const addPaymentRes = await addNewPayment({
+      type: "CPC",
+      amount: ledgerTarget.balance,
+      reservationId,
+      reservationCode: `${reservationId}.${ledgerTargetNo}`,
+    });
+    console.log(addPaymentRes);
+    if (addPaymentRes.status !== 200) {
+      return addPaymentRes;
+    }
+
+    console.log("Closing current ledger...");
+    console.log("Adding new ledger...");
+    await addNewLegder(reservationId);
+    // if (ledgers.length === 1) {
+    // }
+
+    // if (ledgerTargetNo === ledgers.length + 1) {
+    //   const addingRes = await addNewLegder(reservationId);
+    //   console.log(addingRes);
+    // }
+
+    console.log("Clossing current ledger...");
+    const changeStatusRes = await changeLedgerStatus(
+      reservationId,
+      ledgerTarget.ledgerNo,
+      "CLOSE"
+    );
+
+    if (changeStatusRes.status !== 200) {
+      console.log(
+        `Something went wrong trying to change selected ledger status (${changeStatusRes.message})`
+      );
+
+      return {
+        status: changeStatusRes.status,
+        message: changeStatusRes.message,
+      };
+    }
+
+    let payloadPreInvoice = {
+      username: "HTJUGALDEA",
+      propCode: "CECJS",
+      folioCode: `${reservationId}.${ledgerTargetNo}`,
+      guestCode: reservationId,
+      receptorId: RFCData.receptorId,
+      tipoDetalle: "D",
+      currency: "MXN",
+      notas: "",
+      doctype: "G03",
+      receptorNameModified: RFCData.receptorNombre,
+      receptorCP_Modified: "",
+      historico: false,
+      impuestopais: "",
+    };
+
+    console.log("Generating pre-invoice");
+    const authTokens = await TokenStorage.getData();
+    const generatePreInvoiceAPI =
+      "https://front2go.cityexpress.com/F2goPMS/CFDI/PreFactura";
+    const res = await this.frontService.postRequest(
+      payloadPreInvoice,
+      generatePreInvoiceAPI,
+      authTokens
+    );
+
+    if (res.data.errormessage !== "") {
+      console.log("Error trying to create pre-invoice.");
+      throw new Error(res.data.errormessage);
+    }
+
+    const invoiceReceiptId = res.data.comprobanteId;
+    let invoicePayloadConfirmation = {
+      username: "HTJUGALDEA",
+      propCode: "CECJS",
+      folioCode: `${reservationId}.${ledgerTargetNo}`,
+      guestCode: reservationId,
+      receptorId: RFCData.receptorId,
+      tipoDetalle: "D",
+      currency: "MXN",
+      notas: "",
+      doctype: "G03",
+      comprobanteid: invoiceReceiptId,
+      receptorNameModified: "",
+      receptorCP_Modified: "",
+      historico: false,
+      impuestopais: "",
+    };
+
+    console.log("Generating Invoice");
+    const generateInvoiceAPI =
+      "https://front2go.cityexpress.com/F2goPMS/CFDI/GeneraFactura";
+    const res2 = await this.frontService.postRequest(
+      invoicePayloadConfirmation,
+      generateInvoiceAPI,
+      authTokens
+    );
+
+    if (res2.data.errormessage !== "") {
+      console.log("Error trying to create invoice.");
+      throw new Error(res2.data.errormessage);
+    }
+
+    // https://front2go.cityexpress.com/WHS-PMS/CFDI/OpenFile.aspx?pName='G:\CFDI\IPJ030829QDA\17217442.pdf'&Type=PDF&comprobante=17217442
+
+    const senderResponse = await this.sendInvoiceByEmail(
+      invoiceReceiptId,
+      reservationId
+    );
+    console.log(senderResponse);
+
+    const invoicerResponse: InvoiceResponse = {
+      status: 200,
+      reservationId,
+      invoiceReceiptId,
+      invoiceStatus: "TIMBRADO",
+      RFC: RFCData.receptorRfc,
+    };
+    const printerResponse = await this.printInvoiceDoc(invoicerResponse);
+    console.log(printerResponse);
+    return {
+      status: 200,
+      reservationId,
+      invoiceStatus: "TIMBRADO",
+      RFC: RFCData.receptorRfc,
+      invoiceReceiptId,
+      // downloadUrl: `https://front2go.cityexpress.com/WHS-PMS/CFDI/OpenFile.aspx?pName='${res.data.d[1]}'&Type=PDF&comprobante=${invoiceReceiptId}`,
+    };
+  }
+
   private async createInvoice(
     reservationId: string,
     isGeneric: boolean,
@@ -473,6 +716,31 @@ export default class Invoicer {
     console.log(`Balance. ${ledgerTarget.balance}`);
     console.log(`Status. ${ledgerTarget.status}`);
 
+    console.log(
+      `Are you sure to continue with the following invoice information?`
+    );
+    console.log("----------");
+    console.log(`RFC: ${RFCData.receptorRfc}`);
+    console.log(`Name: ${RFCData.receptorNombre}`);
+    console.log(`Postal code: ${RFCData.receptorCpostal}`);
+    console.log(`Regimen: ${RFCData.receptorRegimen}`);
+    console.log("----------\n");
+    const confirmPrompt = [
+      {
+        type: "confirm",
+        name: "confirm",
+        message: "Is data correct?",
+      },
+    ];
+
+    const answer = await inquirer.prompt(confirmPrompt);
+    const confirm = answer.confirm;
+
+    if (!confirm) {
+      console.log("Skipped.\n");
+      return;
+    }
+
     if (ledgerTarget.transactions.length === 0) {
       console.log("Ledger is empty.");
       return;
@@ -507,7 +775,7 @@ export default class Invoicer {
     }
 
     console.log("Closing current ledger...");
-
+    console.log("Adding new ledger...");
     await addNewLegder(reservationId);
     // if (ledgers.length === 1) {
     // }
@@ -517,6 +785,7 @@ export default class Invoicer {
     //   console.log(addingRes);
     // }
 
+    console.log("Clossing current ledger...");
     const changeStatusRes = await changeLedgerStatus(
       reservationId,
       ledgerTarget.ledgerNo,
@@ -570,29 +839,6 @@ export default class Invoicer {
       impuestopais: "",
     };
 
-    console.log(
-      `Are you sure to continue with the following invoice information?:`
-    );
-    console.log("----------");
-    console.log(RFCData.receptorRfc);
-    console.log(RFCData.receptorNombre);
-    console.log("----------\n");
-    const confirmPrompt = [
-      {
-        type: "confirm",
-        name: "confirm",
-        message: "Is data correct?",
-      },
-    ];
-
-    const answer = await inquirer.prompt(confirmPrompt);
-    const confirm = answer.confirm;
-
-    if (!confirm) {
-      console.log("Skipped.\n");
-      return;
-    }
-
     console.log("Generating pre-invoice");
     const authTokens = await TokenStorage.getData();
     const generatePreInvoiceAPI =
@@ -642,13 +888,78 @@ export default class Invoicer {
 
     // https://front2go.cityexpress.com/WHS-PMS/CFDI/OpenFile.aspx?pName='G:\CFDI\IPJ030829QDA\17217442.pdf'&Type=PDF&comprobante=17217442
 
+    const confirmPrompt2 = [
+      {
+        type: "confirm",
+        name: "confirm",
+        message: "Send to email?",
+      },
+    ];
+
+    const answer2 = await inquirer.prompt(confirmPrompt2);
+    const confirm2 = answer2.confirm;
+
+    if (confirm2) {
+      const senderResponse = await this.sendInvoiceByEmail(
+        invoiceReceiptId,
+        reservationId
+      );
+      console.log(senderResponse);
+    }
+    const invoicerResponse: InvoiceResponse = {
+      status: 200,
+      reservationId,
+      invoiceReceiptId,
+      invoiceStatus: "TIMBRADO",
+      RFC: RFCData.receptorRfc,
+    };
+    const printerResponse = await this.printInvoiceDoc(invoicerResponse);
+    console.log(printerResponse);
     return {
       status: 200,
       reservationId,
       invoiceStatus: "TIMBRADO",
+      RFC: RFCData.receptorRfc,
       invoiceReceiptId,
       // downloadUrl: `https://front2go.cityexpress.com/WHS-PMS/CFDI/OpenFile.aspx?pName='${res.data.d[1]}'&Type=PDF&comprobante=${invoiceReceiptId}`,
     };
+  }
+
+  private async sendInvoiceByEmail(
+    invoiceId: string,
+    reservationId: string
+  ): Promise<any> {
+    const emailInputPrompt = [
+      {
+        type: "input",
+        name: "email",
+        message: "Type guest email:",
+      },
+    ];
+
+    const answer = await inquirer.prompt(emailInputPrompt);
+    const email = answer.email;
+
+    const formData = new FormData();
+    formData.append("nComprobante", invoiceId);
+    formData.append("guestCode", reservationId);
+    formData.append("Historico", "false");
+    formData.append("correo", email);
+
+    const authTokens = await TokenStorage.getData();
+    const sendInvoiceResponse = await this.frontService.postRequest(
+      formData,
+      FRONT_API_SEND_INVOICE_EMAIL || "",
+      authTokens
+    );
+
+    const { success, error } = sendInvoiceResponse.data;
+    if (!success) {
+      console.log("Error trying to send invoice by email: " + error);
+      return sendInvoiceResponse.data;
+    }
+
+    return sendInvoiceResponse;
   }
 
   private async askForLedger(ledgers: Ledger[]): Promise<Number> {
@@ -676,9 +987,13 @@ export default class Invoicer {
     ];
 
     const ledgerSelection = await inquirer.prompt(showLedgerList);
+    // console.log(typeof ledgerSelection.selectedLedger);
+    // console.log(ledgerSelection.selectedLedger);
     if (typeof ledgerSelection.selectedLedger === "string") {
-      const ledgerNo = ledgerSelection.selectedLedger.trim(" - ")[0];
-      return ledgerNo || 1;
+      const ledgerNo = Number(
+        ledgerSelection.selectedLedger.trim("-")[0].trim()
+      );
+      return ledgerNo || 1; // 1 as default
     }
 
     return ledgerSelection.selectedLedger;
@@ -772,7 +1087,7 @@ export default class Invoicer {
 
     const authTokens = await TokenStorage.getData();
     const fileName = `${reservation.id}-register-card.pdf`;
-    const fileFir = path.join(STORAGE_TEMP_PATH || "docsToAnalyze");
+    const fileFir = path.join(STORAGE_TEMP_PATH || "", "docsToAnalyze");
     const rsrvRegisterCardDownloadURL =
       "https://front2go.cityexpress.com/F2goPMS/Portada/GetPdfRegistrationForm";
     const response = await this.frontService.downloadByUrl(
@@ -798,7 +1113,7 @@ export default class Invoicer {
     }
 
     const docPath = path.join(__dirname, reservation.id + "-registerCard.pdf");
-    const pdfText = await readPdfText({ url: docPath });
+    const pdfText = await readPdfText({ url: response.filePath });
 
     //TODO: Search for matches to found RFC
     const RFCPattern =
@@ -841,7 +1156,10 @@ export default class Invoicer {
       }
     );
     if (receptorList.length === 0) {
-      throw new Error("RFC receptor not found.");
+      return {
+        status: 400,
+        message: "RFC not found.",
+      };
     }
     const RFCReceptor = receptorList.find((receptor) => receptor.RFC === RFC);
     if (!RFCReceptor) {
@@ -919,6 +1237,27 @@ export default class Invoicer {
       return;
     }
 
+    console.log("Closing current ledger...");
+    console.log("Adding new ledger...");
+    await addNewLegder(reservationId);
+    console.log("Clossing current ledger...");
+    const changeStatusRes = await changeLedgerStatus(
+      reservationId,
+      ledgerTargetNo,
+      "CLOSE"
+    );
+
+    if (changeStatusRes.status !== 200) {
+      console.log(
+        `Something went wrong trying to change selected ledger status (${changeStatusRes.message})`
+      );
+
+      return {
+        status: changeStatusRes.status,
+        message: changeStatusRes.message,
+      };
+    }
+
     // new payload
     // pre invoice
 
@@ -953,14 +1292,14 @@ export default class Invoicer {
     const defPayload = {
       username: "HTJUGALDEA",
       propCode: "CECJS",
-      folioCode: "21537947.2",
-      guestCode: "21537947",
+      folioCode: `${reservationId}.${ledgerTargetNo}`,
+      guestCode: reservationId,
       receptorId: "43",
       tipoDetalle: "D",
       currency: "MXN",
       notas: "",
       doctype: "S01",
-      comprobanteid: "17300028",
+      comprobanteid: invoiceReceiptId,
       receptorNameModified: "",
       receptorCP_Modified: "",
       historico: false,
@@ -974,6 +1313,17 @@ export default class Invoicer {
       generateInvoiceAPI,
       authTokens
     );
+
+    const invoiceResponse: InvoiceResponse = {
+      reservationId,
+      invoiceReceiptId,
+      RFC: "XXX",
+      status: 200,
+      invoiceStatus: "TIMBRADO",
+    };
+
+    const printerResponse = await this.printInvoiceDoc(invoiceResponse);
+    console.log(printerResponse);
 
     return {
       status: 200,
@@ -1002,6 +1352,62 @@ export default class Invoicer {
     } catch (err) {
       console.log(err);
     }
+  }
+
+  async handleCustomInvoice(reservationId: string): Promise<any> {
+    const RFCInputQuestion = [
+      {
+        type: "input",
+        name: "RFC",
+        message: "Input RFC to invoice:",
+      },
+    ];
+
+    const input = await inquirer.prompt(RFCInputQuestion);
+    const answer = input.RFC;
+
+    // validate RFC
+    console.log("Validating input...");
+    const receptorResponse = await this.getReceptorInfo(answer);
+    if (receptorResponse.error) {
+      console.log(receptorResponse.message);
+      return receptorResponse;
+    }
+
+    console.log("Match found. Please confirm to start invocing:");
+    // console.log("----");
+    // console.log(`RFC: ${receptorResponse.receptorRfc}`);
+    // console.log(`Name: ${receptorResponse.receptorName}`);
+    // console.log(`Regimen: ${receptorResponse.receptorRegimen}`);
+    // console.log(`CP: ${receptorResponse.receptorCpostal}`);
+    console.log("----");
+
+    // const confirmPrompt = [
+    //   {
+    //     type: "confirm",
+    //     message: "Confirm invoicing data?",
+    //   },
+    // ];
+
+    // const confirmAns = await inquirer.prompt(confirmPrompt);
+    // if (!confirmAns.confirm) {
+    //   console.log("Skipped...");
+    //   return {
+    //     error: true,
+    //     message: "SKIPPED",
+    //   };
+    // }
+
+    // init invoicing
+    const createinvoiceRes = await this.createInvoice(
+      reservationId,
+      false,
+      receptorResponse
+    );
+
+    console.log(createinvoiceRes);
+
+    return createinvoiceRes;
   }
 
   async deleteInvoicesToPrint(): Promise<void> {
@@ -1048,7 +1454,7 @@ export default class Invoicer {
     await addNewLegder(reservationId);
     const addPaymentRes = await addNewPayment({
       type: "CB",
-      amount: currentLedger?.balance | 0,
+      amount: currentLedger?.balance || 0,
       reservationId,
       reservationCode: `${reservationId}.${ledgerNumber}`,
     });
@@ -1060,69 +1466,104 @@ export default class Invoicer {
       };
     }
 
-    await changeLedgerStatus(reservationId, ledgerNumber, "CLOSED");
-
-    const certificateDataPayload = {
-      pGuest_code: `${reservationId}`,
-      pProp_Code: "CECJS",
-      pReceptorId: "132939",
-      pFolio_code: `${reservationId}.${ledgerNumber}`,
-      pFormat: "D",
-      pNotas: `${certificateId}`,
-      pCurrency: "MXN",
-      pUsoCFDI: "S01",
-      pReceptorNameModified: "MARRIOTT SWITZERLAND LICENSING COMPANY S AR L",
-      pIdiom: "Spa",
-      pUser: "",
-      pReceptorCP_Modified: "",
-    };
-
-    const authTokens = await TokenStorage.getData();
-    const preInvoiceResponse = await this.frontService.postRequest(
-      certificateDataPayload,
-      "https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraPreFacturaV2",
-      authTokens
+    console.log("Closing current ledger...");
+    console.log("Adding new ledger...");
+    await addNewLegder(reservationId);
+    console.log("Clossing current ledger...");
+    const changeStatusRes = await changeLedgerStatus(
+      reservationId,
+      ledgerNumber,
+      "CLOSE"
     );
 
-    const invoiceReceiptId = preInvoiceResponse.data.d[2] || null;
-    if (!invoiceReceiptId) {
-      console.log("Error getting invoice receipt ID");
+    if (changeStatusRes.status !== 200) {
+      console.log(
+        `Something went wrong trying to change selected ledger status (${changeStatusRes.message})`
+      );
       return {
-        status: 400,
-        message: "Error trying to get invoice receipt ID.",
+        status: changeStatusRes.status,
+        message: changeStatusRes.message,
       };
     }
 
-    const invoiceCertificateDataConfirmation = {
-      pComprobante: invoiceReceiptId,
-      pProp_Code: "CECJS",
-      pFolio_code: `${reservationId}.${ledgerNumber}`,
-      pGuest_code: `${reservationId}`,
-      pFormat: "D",
-      pNotas: "",
-      pCurrency: "MXN",
-      pUsoCFDI: "S01",
-      pReceptorNameModified: "",
-      pIdiom: "Spa",
-      pUser: "",
+    const certificateDataPayload = {
+      username: "HTJUGALDEA",
+      propCode: "CECJS",
+      folioCode: `${reservationId}.${ledgerNumber}`,
+      guestCode: reservationId,
+      receptorId: "810829",
+      tipoDetalle: "D",
+      currency: "MXN",
+      notas: certificateId,
+      doctype: "S01",
+      receptorNameModified: "MARRIOTT SWITZERLAND LICENSING COMPANY",
+      receptorCP_Modified: "",
+      historico: false,
+      impuestopais: "",
     };
 
-    console.log("Generating invoice with certificate...");
+    console.log("Generating pre-invoice");
+    const authTokens = await TokenStorage.getData();
+    const generatePreInvoiceAPI =
+      "https://front2go.cityexpress.com/F2goPMS/CFDI/PreFactura";
+    const preInvoiceResponse = await this.frontService.postRequest(
+      certificateDataPayload,
+      generatePreInvoiceAPI,
+      authTokens
+    );
+
+    if (preInvoiceResponse.data.errormessage !== "") {
+      console.log("Error trying to create pre-invoice.");
+      throw new Error(preInvoiceResponse.data.errormessage);
+    }
+
+    const invoiceReceiptId = preInvoiceResponse.data.comprobanteId;
+    let invoicePayloadConfirmation = {
+      username: "HTJUGALDEA",
+      propCode: "CECJS",
+      folioCode: `${reservationId}.${ledgerNumber}`,
+      guestCode: reservationId,
+      receptorId: "810829",
+      tipoDetalle: "D",
+      currency: "MXN",
+      notas: certificateId,
+      doctype: "S01",
+      comprobanteid: invoiceReceiptId,
+      receptorNameModified: "",
+      receptorCP_Modified: "",
+      historico: false,
+      impuestopais: "",
+    };
+
+    console.log("Generating Invoice");
     const generateInvoiceAPI =
-      "https://front2go.cityexpress.com/whs-pms/ws_Facturacion.asmx/GeneraFacturaV2";
-    const invoiceResponse = await this.frontService.postRequest(
-      invoiceCertificateDataConfirmation,
+      "https://front2go.cityexpress.com/F2goPMS/CFDI/GeneraFactura";
+    const res2 = await this.frontService.postRequest(
+      invoicePayloadConfirmation,
       generateInvoiceAPI,
       authTokens
     );
 
-    console.log(invoiceResponse);
+    if (res2.data.errormessage !== "") {
+      console.log("Error trying to create invoice.");
+      throw new Error(res2.data.errormessage);
+    }
+
+    const invoicerResponse: InvoiceResponse = {
+      status: 200,
+      reservationId,
+      invoiceReceiptId,
+      invoiceStatus: "TIMBRADO",
+      RFC: "XXX",
+    };
+    const printerResponse = await this.printInvoiceDoc(invoicerResponse);
+    console.log(printerResponse);
     return {
       status: 200,
       invoiceStatus: "TIMBRADO",
       reservationId,
       invoiceReceiptId,
-      downloadUrldownloadUrl: `https://front2go.cityexpress.com/WHS-PMS/CFDI/OpenFile.aspx?pName='${preInvoiceResponse.data.d[1]}'&Type=PDF&comprobante=${invoiceReceiptId}`,
+      // downloadUrldownloadUrl: `https://front2go.cityexpress.com/WHS-PMS/CFDI/OpenFile.aspx?pName='${preInvoiceResponse.data.d[1]}'&Type=PDF&comprobante=${invoiceReceiptId}`,
     };
   }
 
@@ -1176,20 +1617,28 @@ export default class Invoicer {
       }
 
       const VCC = await getReservationVCC(this.departures[i].id);
-      if (VCC) {
+      if (VCC.provider !== null) {
         console.log("This reservation has a Virtua Credit Card:");
         console.log(VCC);
         const ledgerTargetNo = await this.askForLedger(
           this.departures[i].ledgers
         );
-        console.log(ledgerTargetNo);
         const ledgerTarget = this.departures[i].ledgers.find(
           (ledger) => ledger.ledgerNo === ledgerTargetNo
         );
+        if (ledgerTarget?.balance === 0) {
+          console.log("this reservation is already paid.");
+          continue;
+        }
+
         if (!ledgerTarget) {
           console.log("Ledger not found");
           continue;
         }
+
+        // if (ledgerTarget.status === "CLOSED") {
+        //   if(ledgerTarget)
+        // }
 
         console.log(`VCC Amount to charge ${VCC.amount}`);
         if (VCC.provider === "EXPEDIA") {
@@ -1200,7 +1649,7 @@ export default class Invoicer {
           {
             type: "confirm",
             name: "confirm",
-            message: `Wanna extract balance (${ledgerTarget.balance})?`,
+            message: `Please, confirm the amounts showed above?`,
           },
         ];
 
@@ -1209,7 +1658,7 @@ export default class Invoicer {
 
         if (!confirm) {
           console.log("Skipped");
-          return;
+          continue;
         }
 
         console.log("Applying VCC payment");
@@ -1220,21 +1669,55 @@ export default class Invoicer {
         );
 
         console.log(ecommerceResponse);
+        const genericAskPrompt = [
+          {
+            type: "confirm",
+            name: "confirm2",
+            message: "Create invoice generic?",
+          },
+        ];
+
+        const inq = await inquirer.prompt(genericAskPrompt);
+        const answer2 = inq.confirm2;
+        if (answer2) {
+          try {
+            const ledgerTargetNo = await this.askForLedger(
+              this.departures[i].ledgers
+            );
+            const createGenericInvoiceRes = await this.createGenericInvoice(
+              this.departures[i].id,
+              ledgerTargetNo
+            );
+
+            console.log(createGenericInvoiceRes);
+            continue;
+          } catch (err: any) {
+            console.log(err.message);
+            continue;
+          }
+        } else {
+          const createCustomInvoiceRes = await this.handleCustomInvoice(
+            this.departures[i].id
+          );
+          console.log(createCustomInvoiceRes);
+          continue;
+        }
       }
 
       const reservationDocuments = await getReservationGuaranteeDocs(
         this.departures[i].id
       );
+      const authTokens = await TokenStorage.getData();
       if (reservationDocuments.length > 0) {
-        const authTokens = TokenStorage.getData();
         // Download file to start reading
-        const fileName = `doc-${this.departures[i].id}`;
-        const filePath = path.join(STORAGE_TEMP_PATH || "", fileName);
+        const fileName = `doc-${this.departures[i].id}.pdf`;
+        const fileDir = path.join(STORAGE_TEMP_PATH || "", "docsToAnalyze");
         const fileDownloader = await this.frontService.downloadByUrl(
           fileName,
-          filePath,
+          fileDir,
           authTokens,
-          reservationDocuments[0].downloadUrl
+          reservationDocuments[0].downloadUrl,
+          {}
         );
 
         if (fileDownloader.status !== 200) {
@@ -1249,28 +1732,27 @@ export default class Invoicer {
           this.departures[i]
         );
 
+        console.log(analyzerResult);
         if (analyzerResult.error) {
-          await tempStorage.deleteTempDoc(fileDownloader.filePath);
-          return analyzerResult;
+          // await tempStorage.deleteTempDoc(fileDownloader.filePath);
+          continue;
         }
 
         if (analyzerResult.comparisionMatches.pass) {
           // create invoice with recopiled information
-          await tempStorage.deleteTempDoc(fileDownloader.filePath);
-          const { RFC } = analyzerResult.data;
+          // await tempStorage.deleteTempDoc(fileDownloader.filePath);
+          const { RFC } = analyzerResult.data.result;
 
           // Search for RFC, confirm & make invoice
           const receptorInfo = await this.getReceptorInfo(RFC);
-          if (receptorInfo.error) {
-            console.log("Error trying to creating reservation invoice.");
-            console.group(receptorInfo);
+          if (receptorInfo.status !== 200) {
+            console.log(receptorInfo.message);
             continue;
           }
 
-          const invoiceResponse = await this.createInvoice(
+          const invoiceResponse = await this.createInvoiceWithCoupon(
             this.departures[i].id,
-            false,
-            RFC
+            receptorInfo
           );
 
           console.log(invoiceResponse);
@@ -1312,7 +1794,7 @@ export default class Invoicer {
         {
           type: "list",
           name: "typeSelection",
-          choices: ["System suggestion", "Generic", "Skip"],
+          choices: ["System suggestion", "Generic", "Input custom RFC", "Skip"],
         },
       ];
 
@@ -1353,11 +1835,24 @@ export default class Invoicer {
             ledgerNo
           );
 
-          if (selectionResponse.status === 200) {
-            printerInvoicesQueue.push(selectionResponse);
-            // await this.writeInvoicesToPrint(selectionResponse);
-            await tempStorage.writeInvoicesQueue(selectionResponse);
-          }
+          console.log(selectionResponse);
+
+          // if (selectionResponse.status === 200) {
+          //   printerInvoicesQueue.push(selectionResponse);
+          //   // await this.writeInvoicesToPrint(selectionResponse);
+          //   await tempStorage.writeInvoicesQueue(selectionResponse);
+          // }
+          break;
+        case "Input custom RFC":
+          selectionResponse = await this.handleCustomInvoice(
+            this.departures[i].id
+          );
+          console.log(selectionResponse);
+          // if (selectionResponse.status === 200) {
+          //   printerInvoicesQueue.push(selectionResponse);
+          //   // await this.writeInvoicesToPrint(selectionResponse);
+          //   await tempStorage.writeInvoicesQueue(selectionResponse);
+          // }
           break;
         case "Skip":
           console.log("Skipped");

@@ -54,6 +54,9 @@ export default class OperationManager {
       case "Create routing":
         const utilsRes = await utils.performUtil(operation);
         break;
+      case "Create routing to Virtual Folio":
+        const postingCreate = await utils.performUtil(operation);
+        break;
       case "Get reservation details":
         const utilRsrvRes = await utils.performUtil(operation);
         break;

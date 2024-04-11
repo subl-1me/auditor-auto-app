@@ -74,7 +74,7 @@ export default class PITChecker {
 
   async performChecker(): Promise<any> {
     const items = await getReservationList(IN_HOUSE_FILTER);
-    const todayDate = "2024/04/04";
+    const todayDate = "2024/04/11";
     const authTokens = await TokenStorage.getData();
     const tempStorage = new TempStorage();
     // get rsrv and filter today departures for better performing
@@ -95,6 +95,12 @@ export default class PITChecker {
     for (const reservation of reservations) {
       console.log(`Checking room: ${reservation.room}...`);
       // if (reservation.room !== 623) continue;
+
+      const ledgers = await getReservationLedgerList(
+        reservation.id,
+        reservation.status
+      );
+
       const certificateId = await getReservationCertificate(reservation.id);
       if (certificateId) {
         console.log("This reservation has a certificate.");
@@ -124,12 +130,14 @@ export default class PITChecker {
           fileName,
           fileDir,
           authTokens,
-          document.downloadUrl
+          document.downloadUrl,
+          {}
         );
         if (fileDownloader.status !== 200) {
           console.log("Error trying to download document file.");
           continue;
         }
+
         const analyzerResult = await DocAnalyzer.init(
           fileDownloader.filePath,
           reservation
@@ -140,9 +148,9 @@ export default class PITChecker {
             room: reservation.room,
             error: analyzerResult.message,
           });
-          const deleteFileRes = await tempStorage.deleteTempDoc(
-            fileDownloader.filePath
-          );
+          // const deleteFileRes = await tempStorage.deleteTempDoc(
+          //   fileDownloader.filePath
+          // );
           continue;
         }
 
@@ -163,9 +171,9 @@ export default class PITChecker {
         });
 
         console.log("\n");
-        const deleteFileRes = await tempStorage.deleteTempDoc(
-          fileDownloader.filePath
-        );
+        // const deleteFileRes = await tempStorage.deleteTempDoc(
+        //   fileDownloader.filePath
+        // );
         // const deleteFileRes = await tempStorage.deleteTempDoc(filePath);
         continue;
       }
@@ -189,11 +197,6 @@ export default class PITChecker {
         console.log("\n");
         continue;
       }
-
-      const ledgers = await getReservationLedgerList(
-        reservation.id,
-        reservation.status
-      );
 
       // search a open ledger with transactions in
       const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");

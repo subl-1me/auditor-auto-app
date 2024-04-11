@@ -31,6 +31,7 @@ export const HOME_MENU_OPERATION_NAMES = [
 // Utils-Menu Skeleton
 export const UTILS_MENU_OPERATION_NAMES = [
   "Create routing",
+  "Create routing to Virtual Folio",
   "Get reservation details",
   " Return ",
 ];

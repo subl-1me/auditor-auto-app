@@ -4,6 +4,8 @@ import { couponPatterns, IPatternKeys } from "./types/couponPatterns";
 import { DocAnalyzerResult } from "./types/DocAnalyzerResult";
 import { ACCESS, GTB, CTS } from "./consts";
 import Reservation from "./types/Reservation";
+
+// Auxiliar interface to handle months inside documents's text
 interface IMonths {
   ene: string;
   feb: string;
@@ -18,6 +20,21 @@ interface IMonths {
   nov: string;
   dic: string;
 }
+
+const months: IMonths = {
+  ene: "01",
+  feb: "02",
+  mar: "03",
+  abr: "04",
+  may: "05",
+  jun: "06",
+  jul: "07",
+  ago: "08",
+  sep: "09",
+  oct: "10",
+  nov: "11",
+  dic: "12",
+};
 
 export default class DocAnalyzer {
   constructor() {}
@@ -105,8 +122,11 @@ export default class DocAnalyzer {
         error: true,
         message: "Document is not supported.",
       };
-    } catch (err) {
-      console.log(err);
+    } catch (err: any) {
+      return {
+        error: true,
+        message: err.message,
+      };
     }
   }
 
@@ -133,21 +153,6 @@ export default class DocAnalyzer {
     let dates = {
       dateIn: "",
       dateOut: "",
-    };
-
-    const months: IMonths = {
-      ene: "01",
-      feb: "02",
-      mar: "03",
-      abr: "04",
-      may: "05",
-      jun: "06",
-      jul: "07",
-      ago: "08",
-      sep: "09",
-      oct: "10",
-      nov: "11",
-      dic: "12",
     };
 
     let mothFound = "";

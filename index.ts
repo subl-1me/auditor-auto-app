@@ -26,8 +26,9 @@ async function main(): Promise<void> {
   // );
 
   // await DocAnalyzer.read(filePath);
-  const frontService = new FrontService();
-  const authTokens = await TokenStorage.getData();
+  // const frontService = new FrontService();
+  // const authTokens = await TokenStorage.getData();
+  // const docsPath = path.join(__dirname, "temp", "docsToAnalyze");
 
   // const reservations = await reservationUtils.getReservationList("in-house");
   // for (const reservation of reservations) {
