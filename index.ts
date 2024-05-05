@@ -1,22 +1,53 @@
-import path from "path";
 import MenuStack from "./src/MenuStack";
 import Home from "./src/operations/home/HomeMenu";
 import MenuUtils from "./src/utils/menuUtils";
-import * as reservationUtils from "./src/utils/reservationUtlis";
-import FrontService from "./src/services/FrontService";
-import TokenStorage from "./src/utils/TokenStorage";
-import DocAnalyzer from "./src/DocAnalyzer";
-import fs from "fs/promises";
-import { IN_HOUSE_FILTER } from "./src/consts";
 import dotenv from "dotenv";
+import {
+  analyzeLedgers,
+  classifyLedgers,
+  getReservationExtraFee,
+  getReservationLedgerList,
+  getReservationList,
+  getReservationRates,
+  getReservationRoutings,
+} from "./src/utils/reservationUtlis";
+import { IN_HOUSE_FILTER } from "./src/consts";
+import PITChecker from "./src/operations/pit-checker/PitChecker";
 dotenv.config();
-
-const { STORAGE_TEMP_PATH } = process.env;
+const pitChecker = new PITChecker();
 
 async function main(): Promise<void> {
   const menuStack = new MenuStack();
   const menuUtils = new MenuUtils(menuStack);
+
+  // TODO: Implement a menu CONST KEYS EX: MENU_ACTION_RETURN, MENU_ACTION_
   menuStack.push(new Home());
+  // const reservations = await getReservationList(IN_HOUSE_FILTER);
+  // const reservation = reservations.find(
+  //   (reservation) => reservation.room === 123
+  // );
+  // if (reservation) {
+
+  // }
+
+  // for (const reservation of reservations) {
+  //   console.log(`\nChecking for reservation ${reservation.room}`);
+  //   reservation.ledgers = await getReservationLedgerList(
+  //     reservation.id,
+  //     "CHIN"
+  //   );
+
+  //   const ledgerClassification = await classifyLedgers(
+  //     reservation.id,
+  //     reservation.ledgers
+  //   );
+
+  //   // console.log(ledgerClassification);
+  //   const rates = await getReservationRates(reservation.id);
+  //   const analyzerResult = await analyzeLedgers(ledgerClassification, rates);
+  //   console.log(analyzerResult);
+  //   console.log("-----\n");
+  // }
 
   // const filePath = path.join(
   //   __dirname,
@@ -110,24 +141,11 @@ async function main(): Promise<void> {
       break;
     }
 
-    console.log(userChoice);
     if (userChoice === " Return ") {
       menuStack.pop();
     } else {
       await menuUtils.processUserChoice(userChoice);
     }
-
-    // if (userChoice === "Return") {
-    //   menuStack.pop();
-    //   console.log("returning...");
-    // } else {
-    //   // case user chose another option or return action
-    //   const userProccecedChoice = await menuUtils.processUserChoice(userChoice);
-    //   console.log(userProccecedChoice);
-    //   if (userProccecedChoice === "Return" && !menuStack.isEmpty()) {
-    //     menuStack.pop();
-    //   }
-    // }
   } while (true);
 
   return;

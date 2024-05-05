@@ -1,9 +1,12 @@
 import { readPdfText } from "pdf-text-reader";
-import * as Patterns from "../src/patterns";
+import * as Patterns from "./patterns";
 import { couponPatterns, IPatternKeys } from "./types/couponPatterns";
 import { DocAnalyzerResult } from "./types/DocAnalyzerResult";
-import { ACCESS, GTB, CTS } from "./consts";
+import { ACCESS, GTB, CTS, UNSUPPORTED, COUPON } from "./consts";
+import Comparission from "./types/Comparission";
 import Reservation from "./types/Reservation";
+import GuaranteeDoc from "./types/GuaranteeDoc";
+import path from "path";
 
 // Auxiliar interface to handle months inside documents's text
 interface IMonths {
@@ -36,58 +39,161 @@ const months: IMonths = {
   dic: "12",
 };
 
-export default class DocAnalyzer {
+const couponPatternsList: couponPatterns = Patterns.couponPatternsList;
+const couponPatternsNames = Object.keys(couponPatternsList);
+
+export default class DocumentAnalyzer {
   constructor() {}
 
-  static async init(filePath: string, reservation: Reservation): Promise<any> {
-    // read doc & extract data by following patterns
-    const extractedData = await this.extractData(filePath);
-    if (extractedData.error) {
-      return extractedData;
+  static async isCoupon(documentPath: string): Promise<any> {
+    try {
+      const pdfText = (await readPdfText({ url: documentPath })).toLowerCase();
+
+      for (const couponProviderName of couponPatternsNames) {
+        const couponPatterns =
+          couponPatternsList[couponProviderName as keyof couponPatterns];
+
+        const primaryIdentificatorMatcher = pdfText.match(
+          couponPatterns.primaryIdentificator
+        );
+        if (primaryIdentificatorMatcher) {
+          // const coupon = this.improveCouponPatternMatches(
+          //   couponPatterns,
+          //   pdfText,
+          //   couponName
+          // );
+
+          // return {
+          //   error: false,
+          //   result: coupon,
+          // };
+
+          return {
+            isCoupon: true,
+            couponProviderName,
+          };
+        }
+      }
+
+      return {
+        isCoupon: false,
+      };
+    } catch (err: any) {
+      return {
+        error: true,
+        message: err.message,
+      };
     }
-    const comparisonResult = await this.compare(reservation, extractedData);
-    return comparisonResult;
   }
 
-  private static async compare(
-    reservation: Reservation,
-    extracteData: any
-  ): Promise<any> {
-    const { id, dateIn, dateOut } = reservation;
-    let comparision = {
-      pass: false,
-      id: false,
-      guestName: false,
-      dateInMatches: false,
-      dateOutMatches: false,
-    };
-
-    const { reservationTarget, dates } = extracteData.result;
-
-    if (id === reservationTarget) {
-      comparision.id = true;
+  public static async classifyDocument(documentPath: string): Promise<any> {
+    const documentName = path.basename(documentPath);
+    console.log(`Classifying document ${documentName}...`);
+    const checker = await this.isCoupon(documentPath);
+    if (!checker.isCoupon) {
+      return {
+        error: false,
+        classify: UNSUPPORTED,
+      };
     }
 
-    if (dates.dateIn === dateIn) {
-      comparision.dateInMatches = true;
+    if (checker.error) {
+      console.log(
+        `Error trying to read document. Try again later or check document in main system.`
+      );
+      return {
+        error: true,
+        message: `Error trying to read document. ${checker.message}`,
+      };
     }
-
-    if (dates.dateOut === dateOut) {
-      comparision.dateOutMatches = true;
-    }
-
-    // if (
-    //   comparision.id &&
-    //   comparision.dateInMatches &&
-    //   comparision.dateOutMatches
-    // ) {
-    //   comparision.pass = true;
-    // }
-    comparision.pass = true;
 
     return {
-      comparisionMatches: comparision,
-      data: extracteData,
+      error: false,
+      classify: COUPON,
+      providerName: checker.couponProviderName,
+    };
+  }
+
+  // static async init(filePath: string, reservation: Reservation): Promise<any> {
+  //   // read doc & extract data by following patterns
+  //   const extractedData = await this.extractData(filePath);
+  //   if (extractedData.error) {
+  //     return extractedData;
+  //   }
+  //   const comparisonResult = await this.compare(reservation, extractedData);
+  //   return comparisonResult;
+  // }
+
+  public static async compare(
+    documentPath: string,
+    reservation: Reservation,
+    couponProviderName: string
+  ): Promise<any> {
+    const pdfText = (await readPdfText({ url: documentPath })).toLowerCase();
+    const couponPatterns =
+      couponPatternsList[couponProviderName as keyof couponPatterns];
+    const patternMatches = this.improveCouponPatternMatches(
+      couponPatterns,
+      pdfText,
+      couponProviderName
+    );
+
+    const { id, dateIn, dateOut } = reservation;
+    let comparission: Comparission = {
+      pass: false,
+      id: {
+        match: false,
+        toCompare: [],
+      },
+      dateInMatches: {
+        match: false,
+        toCompare: [],
+      },
+      dateOutMatches: {
+        match: false,
+        toCompare: [],
+      },
+    };
+
+    const { reservationTarget, dates } = patternMatches;
+    comparission.id.toCompare.push(id);
+    comparission.id.toCompare.push(reservationTarget);
+    if (id === reservationTarget) {
+      comparission.id.match = true;
+    }
+
+    comparission.dateInMatches.toCompare.push(dateIn);
+    comparission.dateInMatches.toCompare.push(dates.dateIn);
+    if (dateIn === dates.dateIn) {
+      comparission.dateInMatches.match = true;
+    }
+
+    comparission.dateOutMatches.toCompare.push(dateOut);
+    comparission.dateOutMatches.toCompare.push(dates.dateOut);
+    if (dateOut === dates.dateOut) {
+      comparission.dateOutMatches.match = true;
+    }
+
+    const idMatches = comparission.id.match;
+    const dateInMatches = comparission.dateInMatches.match;
+    const dateOutMatches = comparission.dateOutMatches.match;
+
+    comparission.pass = true;
+    // if (idMatches && dateInMatches && dateOutMatches) {
+    //   comparission.pass = true;
+    // }
+
+    // if (
+    //   comparission.id &&
+    //   comparission.dateInMatches &&
+    //   comparission.dateOutMatches
+    // ) {
+    //   comparission.pass = true;
+    // }
+
+    return {
+      comparission,
+      patternMatches,
     };
   }
 
@@ -155,7 +261,7 @@ export default class DocAnalyzer {
       dateOut: "",
     };
 
-    let mothFound = "";
+    let monthFound = "";
     // if(couponProvider === "couponGTB")
     if (couponProvider === "couponGBT") {
       const datesMatchSentence = text.match(patterns.bothDatesPattern || /d/);
@@ -166,15 +272,15 @@ export default class DocAnalyzer {
       if (datesSentenceImprovedMatch) {
         const monthsNames = Object.keys(months);
         datesSentenceImprovedMatch.forEach((dateSentence) => {
-          if (mothFound !== "") {
+          if (monthFound !== "") {
             dateSentence = dateSentence
-              .replace(mothFound, months[mothFound as keyof IMonths])
+              .replace(monthFound, months[monthFound as keyof IMonths])
               .replace(/-/g, "/");
             dates.dateOut = dateSentence;
           }
           monthsNames.forEach((month) => {
             if (dateSentence.includes(month)) {
-              mothFound = month;
+              monthFound = month;
               dateSentence = dateSentence
                 .replace(month, months[month as keyof IMonths])
                 .replace(/-/g, "/");

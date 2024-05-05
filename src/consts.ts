@@ -11,6 +11,29 @@ export const PRE_INVOICED = "PreFactura";
 export const EXPEDIA = "EXPEDIA";
 export const BOOKING = "BOOKING";
 
+// Reservation payment status
+export const FULLY_PAID = "FULLY PAID";
+export const PRE_PAID = "PRE PAID";
+export const PARTIAL_PAID = "PARTIAL PAID";
+export const MIXED_PAYS = "MIXED PAYS";
+export const PENDING = "PENDING PAYMENT";
+export const PAYMENT_ERROR = "PAYMENT ERROR";
+export const ROUTED = "ROUTED";
+export const ROUTER = "ROUTER";
+export const COUPON_NOT_PASS = "COUPON NOT PASS";
+
+// PrePaid Methods names
+export const DOCUMENTS = "DOCUMENTS";
+export const COUPONS = "COUPONS";
+export const VIRTUAL_CARD = "VIRTUAL CARD";
+export const CERTIFICATE = "CERTIFICATE";
+export const DOCS = "DOCS";
+
+// Coupon classifier
+export const UNSUPPORTED = "UNSUPPORTED";
+export const COUPON = "COUPON";
+export const UNKNOWN = "UNKNOWN";
+
 // Coupon providers
 export const ACCESS = "CUPÓN ACCESS";
 export const GTB = "GTB TRAVEL SERVICES MEXICO";
@@ -20,6 +43,7 @@ export const CTS = "CORPORATE TRAVEL SERVICES WORLDWIDE";
 export const HOME_MENU_OPERATION_NAMES = [
   "Login",
   "Invoicer",
+  "Apply pre-paid methods",
   "Print docs",
   "Check PIT",
   "Check all virtual cards",

@@ -9,6 +9,7 @@ import Printer from "./printer/Printer";
 import PITChecker from "./pit-checker/PitChecker";
 import CheckVirtualCards from "./check-virtual-cards/CheckVirtualCards";
 import Utils from "./utils/Utils";
+import PaymentApplier from "./prePaidApplier/prePaidApplier";
 
 export default class OperationManager {
   constructor() {}
@@ -39,6 +40,10 @@ export default class OperationManager {
       case "Print docs":
         const printer = new Printer();
         operationResponse = await printer.performPrinter(menuStack);
+        break;
+      case "Apply pre-paid methods":
+        const prePaidApplier = new PaymentApplier();
+        const applierResponse = await prePaidApplier.performPrePaidApplier();
         break;
 
       case "Check PIT":

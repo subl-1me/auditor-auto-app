@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import ReservationChecked from "../types/ReservationChecked";
+import Reservation from "../types/Reservation";
 
 const STORAGE_TEMP_PATH = process.env.STORAGE_TEMP_PATH || "";
 const INVOICES_QUEUE_FILENAME = path.join(
@@ -174,20 +175,22 @@ export class TempStorage {
     }
   }
 
-  async writeChecked(reservation: ReservationChecked): Promise<any> {
+  async writeChecked(reservation: any): Promise<any> {
     if (!fs.existsSync(CHECKED_LIST_PATH)) {
       await this.createDefaultCheckedList();
     }
 
     try {
-      const checkedList = await this.readChecked();
-      checkedList.checkedList.push(reservation);
+      const data = await this.readChecked();
+      // if (checkedList.find((result: any) => result.id === reservation.id)) {
+      //   return {
+      //     status: 400,
+      //     message: "DUPLICATE",
+      //   };
+      // }
+      data.checkedList.push(reservation);
 
-      await fsAsync.writeFile(
-        CHECKED_LIST_PATH,
-        JSON.stringify(checkedList),
-        "utf8"
-      );
+      await fsAsync.writeFile(CHECKED_LIST_PATH, JSON.stringify(data), "utf8");
 
       return {
         status: 200,

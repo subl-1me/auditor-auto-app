@@ -10,7 +10,7 @@ export interface IPatternKeys {
 }
 
 export interface couponPatterns {
-  couponAccess: IPatternKeys;
+  // couponAccess: IPatternKeys;
   couponGBT: IPatternKeys;
   couponCTS: IPatternKeys;
   couponVCI: IPatternKeys;

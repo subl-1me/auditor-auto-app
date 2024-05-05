@@ -56,7 +56,14 @@ export default class Scrapper {
     return certificate;
   }
 
-  extractRoutings(): any[] {
+  extractExtraFee(): any {
+    const extraFreePattern = /<a> id="aExtraFee"([\s\S\t.]*?)<\/a>/;
+    const extraFeeMatch = this.htmlBody.match(extraFreePattern);
+
+    console.log(extraFeeMatch);
+  }
+
+  extractRoutings(): any {
     let routings: any = [];
     const varName = "itemArray";
     const itemsPattern = new RegExp(`\\b${varName}\\s*=\\s*"(.*?)"`);

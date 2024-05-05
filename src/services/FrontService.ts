@@ -4,7 +4,6 @@ import { CookieJar } from "tough-cookie";
 import * as FormData from "form-data";
 import * as fsSync from "fs";
 import fs from "fs/promises";
-import Ledger from "../types/Ledger";
 import path from "path";
 
 export default class FrontService {
@@ -38,6 +37,7 @@ export default class FrontService {
       }
 
       let response;
+
       if (authentication) {
         response = await this.http({
           method: "POST",
@@ -45,6 +45,7 @@ export default class FrontService {
           data: formData,
           headers: {
             Authorization: `Bearer ${authentication.bearerToken}`,
+            // 'Content-Type': 'application/x-www-form-urlencoded',
             Cookie:
               authentication.aspNetTokenCookie +
               `; mAutSession=${authentication.mAutSession}; `,
@@ -68,8 +69,27 @@ export default class FrontService {
       return response;
     } catch (err: any) {
       console.log(err);
-      throw new Error(err.message);
+      return {
+        message: err.message,
+        status: 500,
+      };
     }
+  }
+
+  async testRequest(tokens: any, url: string, data: any): Promise<any> {
+    const response = await this.http({
+      method: "POST",
+      url,
+      data,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Cookie:
+          tokens.aspNetTokenCookie +
+          `; mAutSession=${tokens.mAutSession}; .AspNetCore.Antiforgery.2csuwK8zOzQ=CfDJ8KL1KKJTSCJKowGapKsReu-Ui_P3ysG061ob-ghk4yJYGPFEGhUCn_YR23fggsCeu9R_C5qz2Nf8mZGjk2d9bnLQrUi1XiHFU9cIfpU-3ps_Q7t035f2Rnc0gZUGZ_Zp2UwDJiCOjnxntnFX3eu1oD4; `,
+      },
+    });
+
+    console.log(response);
   }
 
   async downloadByUrl(

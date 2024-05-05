@@ -3,10 +3,11 @@ import Transaction from "./Transaction";
 
 export default interface Ledger {
   ledgerNo: number;
+  isPrincipal?: boolean;
   status: string;
   balance: number;
   isBalanceCredit: boolean;
   transactions: Transaction[];
-  isInvoiced: boolean;
-  invoice: Invoice | null;
+  isInvoiced?: boolean;
+  invoice?: Invoice | null;
 }

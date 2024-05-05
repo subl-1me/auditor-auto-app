@@ -48,15 +48,15 @@ export const CTS_PROVIDER = "CTS";
 export const GBT_PROVIDER = "GBT";
 
 export const couponPatternsList: couponPatterns = {
-  couponAccess: {
-    primaryIdentificator: /cupón access/,
-    reservationIdTargetSentence: new RegExp(`clave de conﬁrmación \\d+`),
-    reservationId: /\d+/,
-    rfcPattern:
-      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
-    dateInPattern: new RegExp(`\\d+\\-\\d+\\-\\d+`, "g"),
-    dateOutPattern: new RegExp(`fecha de salida \\d+\\-\\d+\\-\\d+`),
-  },
+  // couponAccess: {
+  //   primaryIdentificator: /cupón access/,
+  //   reservationIdTargetSentence: new RegExp(`clave de conﬁrmación \\d+`),
+  //   reservationId: /\d+/,
+  //   rfcPattern:
+  //     /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
+  //   dateInPattern: new RegExp(`\\d+\\-\\d+\\-\\d+`, "g"),
+  //   dateOutPattern: new RegExp(`fecha de salida \\d+\\-\\d+\\-\\d+`),
+  // },
   couponGBT: {
     primaryIdentificator: /gbt travel services mexico/,
     reservationIdTargetSentence: new RegExp(`confirmado por:(.*)\\d+`),
@@ -97,5 +97,8 @@ export const VCCPatternsList: VCCPatterns = {
   },
   AGODA: {
     amountPattern: /-AUTH MXN\d+\.\d+/,
+  },
+  EBOOKING: {
+    amountPattern: /VIRTUAL CREDIT CARD VCC AUTH MXN \d+\.\d+,CTRIP PA/,
   },
 };
