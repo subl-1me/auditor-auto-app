@@ -391,7 +391,6 @@ export default class PITChecker {
     };
 
     // console.log(rateChecker);
-
     reservation.ledgers = await getReservationLedgerList(
       reservation.id,
       "CHIN"

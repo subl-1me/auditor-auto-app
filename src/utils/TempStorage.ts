@@ -7,6 +7,7 @@ dotenv.config();
 import ReservationChecked from "../types/ReservationChecked";
 import Reservation from "../types/Reservation";
 import { PRE_PAID } from "../consts";
+import PitCheckerResult from "../types/PitCheckerResult";
 
 const STORAGE_TEMP_PATH = process.env.STORAGE_TEMP_PATH || "";
 const INVOICES_QUEUE_FILENAME = path.join(
@@ -197,6 +198,10 @@ export class TempStorage {
       console.log(err);
       return [];
     }
+  }
+
+  async updateChecker(checkResult: PitCheckerResult): Promise<any> {
+    const checkedListData = await this.readChecked();
   }
 
   async writeChecked(reservation: any): Promise<any> {

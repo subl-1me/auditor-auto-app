@@ -10,6 +10,7 @@ import PITChecker from "./pit-checker/PitChecker";
 import CheckVirtualCards from "./check-virtual-cards/CheckVirtualCards";
 import Utils from "./utils/Utils";
 import PaymentApplier from "./prePaidApplier/prePaidApplier";
+import CheckReservation from "./check-reservation/CheckReservation";
 
 export default class OperationManager {
   constructor() {}
@@ -45,7 +46,10 @@ export default class OperationManager {
         const prePaidApplier = new PaymentApplier();
         const applierResponse = await prePaidApplier.performPrePaidApplier();
         break;
-
+      case "Check reservation":
+        const checkReservation = new CheckReservation();
+        const checkResponse = await checkReservation.performCheck();
+        break;
       case "Check PIT":
         const pitChecker = new PITChecker();
         operationResponse = await pitChecker.performChecker();

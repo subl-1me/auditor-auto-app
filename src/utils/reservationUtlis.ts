@@ -1287,6 +1287,78 @@ export async function getVirtualPostList(): Promise<Reservation[]> {
   return rowsFiltered;
 }
 
+export async function getReservationByFilter(filter: string): Promise<any> {
+  const authTokens = await TokenStorage.getData();
+  let searchPayload = {
+    pc: "KFwHWn911eaVeJhL++adWg==",
+    ph: false,
+    pn: "",
+    ci: "",
+    gpi: "",
+    ti: "",
+    rc: "",
+    rm: "",
+    fm: "",
+    to: "",
+    fq: "",
+    rs: "CHIN,NOSHOW,POST",
+    st: "EC",
+    NoPax: "",
+    grp: "",
+    gs: "",
+    sidx: "NameGuest",
+    sord: "asc",
+    rows: 100,
+    page: 1,
+    ss: false,
+    rcss: "",
+    user: "HTJUGALDEA",
+    AddGuest: false,
+  };
+
+  let httpResponse;
+  // it means the input is number room
+  if (filter.length === 3) {
+    searchPayload.rm = filter;
+    httpResponse = await frontService.postRequest(
+      searchPayload,
+      FRONT_API_RSRV_LIST || "",
+      authTokens
+    );
+  } else {
+    // it means it is reservation id
+    searchPayload.rc = filter;
+    httpResponse = await frontService.postRequest(
+      searchPayload,
+      FRONT_API_RSRV_LIST || "",
+      authTokens
+    );
+  }
+
+  if (!httpResponse) {
+    return {
+      error: true,
+      message: "Error trying to get reservation data. Check input filter.",
+    };
+  }
+
+  const items = httpResponse.data.rows;
+  if (!items[0]) {
+    return null;
+  }
+  const reservation: Reservation = {
+    id: items[0].rsrvCode,
+    guestName: items[0].nameGuest,
+    room: Number(items[0].room),
+    dateIn: items[0].dateIn,
+    dateOut: items[0].dateOut,
+    status: items[0].statusGuest,
+    company: items[0].company,
+    agency: items[0].agency,
+    ledgers: [],
+  };
+  return reservation;
+}
 /**
  * @description Gets reservation list by following a status filter.
  * @param {string} status Condition to fetch list of reservation. See consts file to see usable filters.

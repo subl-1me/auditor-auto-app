@@ -46,6 +46,7 @@ export const HOME_MENU_OPERATION_NAMES = [
   "Invoicer",
   "Apply pre-paid methods",
   "Print docs",
+  "Check reservation",
   "Check PIT",
   "Check all virtual cards",
   "Utils",
