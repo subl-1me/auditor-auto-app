@@ -3,6 +3,9 @@ export default class MessageDisplayer {
 
   display(response: any): void {
     if (response.status === 200) {
+      if (response === "") {
+        return;
+      }
       console.log(`\u001b[32m ${response.message} \n`);
     }
 

@@ -3,5 +3,5 @@ export default interface Transaction {
   code: string;
   isRefund: boolean;
   amount: number;
-  date: string;
+  date: string | Date;
 }

@@ -85,7 +85,7 @@ export default class Scrapper {
     );
     const BearerVar = bearerVarDeclaration ? bearerVarDeclaration[0] : "";
     if (BearerVar === "") {
-      throw new Error("Bearer token was not found in request response.");
+      throw new Error("Bearer token not found.");
     }
 
     const bearerResult = BearerVar.match(BearerValuePattern);
@@ -173,6 +173,7 @@ export default class Scrapper {
       return rateCodeMatch[1]; // rate code always match at position 2
     }
 
+    console.log(this.htmlBody);
     return null;
   }
 

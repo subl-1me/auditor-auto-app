@@ -1,6 +1,7 @@
 // reservation search filters
 export const DEPARTURES_FILTER = "departures";
 export const IN_HOUSE_FILTER = "in-house";
+export const IN_CHECK_OUT_FILTER = "CHOUT";
 
 // invoice status
 // it is on spanish because the API's language is spanish
@@ -12,12 +13,12 @@ export const EXPEDIA = "EXPEDIA";
 export const BOOKING = "BOOKING";
 
 // Reservation payment status
-export const FULLY_PAID = "FULLY PAID";
-export const PRE_PAID = "PRE PAID";
-export const PARTIAL_PAID = "PARTIAL PAID";
-export const MIXED_PAYS = "MIXED PAYS";
-export const PENDING = "PENDING PAYMENT";
-export const PAYMENT_ERROR = "PAYMENT ERROR";
+export const FULLY_PAID = "FULLY_PAID";
+export const PRE_PAID = "PRE_PAID";
+export const PARTIAL_PAID = "PARTIAL_PAID";
+export const MIXED_PAID = "MIXED_PAID";
+export const PENDING = "PENDING";
+export const ERROR = "ERROR";
 export const ROUTED = "ROUTED";
 export const ROUTER = "ROUTER";
 export const COUPON_NOT_PASS = "COUPON NOT PASS";
@@ -25,7 +26,7 @@ export const COUPON_NOT_PASS = "COUPON NOT PASS";
 // PrePaid Methods names
 export const DOCUMENTS = "DOCUMENTS";
 export const COUPONS = "COUPONS";
-export const VIRTUAL_CARD = "VIRTUAL CARD";
+export const VIRTUAL_CARD = "VIRTUAL_CARD";
 export const CERTIFICATE = "CERTIFICATE";
 export const DOCS = "DOCS";
 

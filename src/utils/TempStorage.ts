@@ -6,6 +6,7 @@ dotenv.config();
 
 import ReservationChecked from "../types/ReservationChecked";
 import Reservation from "../types/Reservation";
+import { PRE_PAID } from "../consts";
 
 const STORAGE_TEMP_PATH = process.env.STORAGE_TEMP_PATH || "";
 const INVOICES_QUEUE_FILENAME = path.join(
@@ -175,6 +176,29 @@ export class TempStorage {
     }
   }
 
+  async writeCheckedOn(category: string, datta: any): Promise<any> {
+    if (!fs.existsSync(CHECKED_LIST_PATH)) {
+      await this.createDefaultCheckedList();
+    }
+
+    try {
+      const data = await this.readChecked();
+      if (category === PRE_PAID) {
+        data.PRE_PAID[datta.prePaidMethod.type].push(datta);
+      } else {
+        data[category].push(datta);
+      }
+      await fsAsync.writeFile(CHECKED_LIST_PATH, JSON.stringify(data), "utf8");
+      return {
+        status: 200,
+        message: "Data uploaded.",
+      };
+    } catch (err) {
+      console.log(err);
+      return [];
+    }
+  }
+
   async writeChecked(reservation: any): Promise<any> {
     if (!fs.existsSync(CHECKED_LIST_PATH)) {
       await this.createDefaultCheckedList();
@@ -216,6 +240,18 @@ export class TempStorage {
   private async createDefaultCheckedList(): Promise<any> {
     try {
       let defaultData = {
+        PENDING: [],
+        PRE_PAID: {
+          VIRTUAL_CARD: [],
+          COUPON: [],
+          CERTIFICATE: [],
+          UNKOWN: [],
+        },
+        FULLY_PAID: [],
+        PARTIAL_PAID: [],
+        ROUTER: [],
+        ROUTED: [],
+        ERROR: [],
         checkedList: [],
       };
 

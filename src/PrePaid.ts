@@ -78,21 +78,21 @@ export default class PrePaid {
 
         const mainCoupon = await this.findPrimaryCoupon(coupons, reservation);
         if (!mainCoupon) {
-          console.log("Error trying to get main coupon.");
+          // console.log("Error trying to get main coupon.");
           return null;
         }
 
-        console.log(`\nCoupon pass.`);
-        console.log("---");
-        console.log(`Provider: ${mainCoupon.result.patternMatches.provider}`);
-        console.log(`RFC: ${mainCoupon.result.patternMatches.RFC}`);
-        console.log(
-          `To reservation: ${mainCoupon.result.patternMatches.reservationTarget}`
-        );
-        console.log(
-          `Dates: ${mainCoupon.result.patternMatches.dates.dateIn} to ${mainCoupon.result.patternMatches.dates.dateOut}`
-        );
-        console.log("---\n");
+        // console.log(`\nCoupon pass.`);
+        // console.log("---");
+        // console.log(`Provider: ${mainCoupon.result.patternMatches.provider}`);
+        // console.log(`RFC: ${mainCoupon.result.patternMatches.RFC}`);
+        // console.log(
+        //   `To reservation: ${mainCoupon.result.patternMatches.reservationTarget}`
+        // );
+        // console.log(
+        //   `Dates: ${mainCoupon.result.patternMatches.dates.dateIn} to ${mainCoupon.result.patternMatches.dates.dateOut}`
+        // );
+        // console.log("---\n");
         prePaidType = COUPON;
         return {
           type: prePaidType,
@@ -118,7 +118,7 @@ export default class PrePaid {
   ): Promise<any> {
     const isArray = Array.isArray(prePaidMethod.data);
     if (!isArray) {
-      console.log("This reservation has no coupons.");
+      // console.log("This reservation has no coupons.");
       return;
     }
 

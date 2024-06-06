@@ -22,6 +22,9 @@ export default class PrePaidApplier {
 
   private async getPrePaidDepartures(): Promise<Reservation[]> {
     const getPrePaidMethodsPromises: any = [];
+    this.departures = this.departures.filter(
+      (reservation) => !reservation.guestName.includes("AEROBUS")
+    );
     for (const reservation of this.departures) {
       console.log(
         `Searching ${reservation.guestName} - ${reservation.room} for VCC, coupons or certificates...`
@@ -96,6 +99,20 @@ export default class PrePaidApplier {
       },
     ];
 
+    const skippedByUserPrompt = [
+      {
+        type: "input",
+        name: "skip",
+        message: "Type reservations rooms to skip:",
+      },
+    ];
+
+    const skipResponse = await inquirer.prompt(skippedByUserPrompt);
+    const skipInput = skipResponse.skip;
+    const skipList = skipInput
+      .split(" ")
+      .map((roomString: string) => Number(roomString));
+
     const response = await inquirer.prompt(confirmPrompt);
     const answer = response.conf;
 
@@ -130,10 +147,18 @@ export default class PrePaidApplier {
 
     console.log("\n -----------");
     const applyPrePayMethodPromises: any = [];
-    const skipped: number[] = [324];
+    // let index = prePaidReservations.findIndex(
+    //   (reservation) => reservation.room === 315
+    // );
+
+    // const prepaid = prePaidReservations.slice(
+    //   index,
+    //   prePaidReservations.length
+    // );
+
     for (const reservation of prePaidReservations) {
-      if (skipped.includes(reservation.room)) {
-        console.log("This reservatio will be skipped by user.");
+      if (skipList.includes(reservation.room)) {
+        console.log("This reservation will be skipped by user.");
         continue;
       }
       // if (

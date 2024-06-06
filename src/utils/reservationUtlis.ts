@@ -542,6 +542,12 @@ export async function getReservationLedgerList(
     const transactions = await getLedgerTransactions(
       `${reservationId}.${ledger.numFolio}`
     );
+    if (transactions.error) {
+      console.log(
+        `There was an error trying to get ledger ${ledger.numFolio} transactions...`
+      );
+      continue;
+    }
     let balance = ledger.folioBalance
       ? parseFloat(ledger.folioBalance.toString()).toFixed(2)
       : 0;
@@ -697,43 +703,62 @@ function getTotalNightsPaid(rateDetail: RateDetails, balance: number): any {
   }
 }
 
-function getLedgersBehavior(
+function roomRentTracer(
   ledgerClassification: any,
-  rates: RateDetails
+  reservationRates: RateDetails
 ): any {
-  const { invoiced, invoicable, empty, active } = ledgerClassification;
-
+  const { invoiced, invoicable, active } = ledgerClassification;
   // TODO: Search for NO ROOM CHARGES to skip it
 
   // TODO: Search for room charges to compare with rates
-  console.log("Reservation rates: ");
-  console.log(rates);
-  console.log("\n");
-
-  const behaviourResults: any = [];
+  // console.log("Reservation rates: ");
+  // console.log(rates);
+  // console.log("\n");
+  const invoicedRentTracer: any = [];
+  const invoicableRentTracer: any = [];
+  const activeRentTracer: any = [];
+  // TODO: Categorize each charge to handle complex movements inside each ledger
   invoiced.forEach((ledger: Ledger) => {
     console.log(`For invoiced ledger ${ledger.ledgerNo}:`);
     const charges = ledger.transactions.filter(
       (transaction) =>
         transaction.type === "CHARGE" && transaction.code === "HAB"
     );
+    if (charges.length > 0) {
+      const chargesComparission = compareReservationRatesWithCharges(
+        ledger.ledgerNo,
+        charges,
+        reservationRates
+      );
 
-    const lastCharge = charges[charges.length - 1];
-    const lastChargeDate = new Date(lastCharge.date);
-    const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
-    console.log(charges);
-    console.log(lastChargeDateString);
-    const lastChargeIndex = rates.rates.findIndex(
-      (rate) => rate.dateToApply === lastChargeDateString
-    );
-    if (!lastChargeIndex || lastChargeIndex === -1) {
-      console.log(`${lastCharge.date} is last rate.`);
+      invoicedRentTracer.push(chargesComparission);
+
+      // console.log(chargesComparission);
+      // const lastCharge = charges[charges.length];
+      // const lastChargeDate = new Date(lastCharge.date);
+      // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
+      // console.log(rates);
+      // console.log(lastChargeDate);
+      // console.log(lastChargeDateString);
+      // // console.log(charges);
+
+      // const lastChargeIndex = rates.findIndex(
+      //   (rate) => rate.dateToApply === lastChargeDateString
+      // );
+      // if (!lastChargeIndex || lastChargeIndex === -1) {
+      //   console.log(`${lastCharge.date} is last rate.`);
+      // } else {
+      //   const nextRateToCharge = rates[lastChargeIndex + 1];
+      //   console.log(
+      //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+      //   );
+      // }
     } else {
-      const nextRateToCharge = rates.rates[lastChargeIndex + 1];
       console.log(
-        `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+        `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
       );
     }
+
     // const lastChargeDate = new Date(lastCharge.date);
     console.log("\n---");
   });
@@ -745,21 +770,37 @@ function getLedgersBehavior(
         transaction.type === "CHARGE" && transaction.code === "HAB"
     );
     // console.log(charges);
-    const lastCharge = charges[charges.length - 1];
-    const lastChargeDate = new Date(lastCharge.date);
-    const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
-    console.log(charges);
+    if (charges.length > 0) {
+      const chargesComparission = compareReservationRatesWithCharges(
+        ledger.ledgerNo,
+        charges,
+        reservationRates
+      );
 
-    console.log(lastChargeDateString);
-    const lastChargeIndex = rates.rates.findIndex(
-      (rate) => rate.dateToApply === lastChargeDateString
-    );
-    if (!lastChargeIndex || lastChargeIndex === -1) {
-      console.log(`${lastCharge.date} is last rate.`);
+      invoicableRentTracer.push(chargesComparission);
+
+      // console.log(chargesComparission);
+      // const lastCharge = charges[charges.length];
+      // const lastChargeDate = new Date(lastCharge.date);
+      // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
+      // console.log(rates);
+      // console.log(lastChargeDate);
+      // console.log(lastChargeDateString);
+
+      // const lastChargeIndex = rates.findIndex(
+      //   (rate) => rate.dateToApply === lastChargeDateString
+      // );
+      // if (!lastChargeIndex || lastChargeIndex === -1) {
+      //   console.log(`${lastCharge.date} is last rate.`);
+      // } else {
+      //   const nextRateToCharge = rates[lastChargeIndex + 1];
+      //   console.log(
+      //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+      //   );
+      // }
     } else {
-      const nextRateToCharge = rates.rates[lastChargeIndex + 1];
       console.log(
-        `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+        `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
       );
     }
     console.log("\n---");
@@ -772,29 +813,125 @@ function getLedgersBehavior(
         transaction.type === "CHARGE" && transaction.code === "HAB"
     );
     if (charges.length > 0) {
-      const lastCharge = charges[charges.length - 1];
-      const lastChargeDate = new Date(lastCharge.date);
-      const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
-      console.log(charges);
-
-      console.log(lastChargeDateString);
-      const lastChargeIndex = rates.rates.findIndex(
-        (rate) => rate.dateToApply === lastChargeDateString
+      // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
+      const chargesComparission = compareReservationRatesWithCharges(
+        ledger.ledgerNo,
+        charges,
+        reservationRates
       );
-      if (!lastChargeIndex || lastChargeIndex === -1) {
-        console.log(`${lastCharge.date} is last rate.`);
-      } else {
-        const nextRateToCharge = rates.rates[lastChargeIndex + 1];
-        console.log(
-          `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
-        );
-      }
+
+      activeRentTracer.push(chargesComparission);
+
+      // console.log(chargesComparission);
+
+      // console.log(lastChargeDateString);
+      // const lastChargeIndex = rates.findIndex(
+      //   (rate) => rate.dateToApply === lastChargeDateString
+      // );
+      // if (!lastChargeIndex || lastChargeIndex === -1) {
+      //   console.log(`${lastCharge} is last rate.`);
+      // } else {
+      //   const nextRateToCharge = rates[lastChargeIndex + 1];
+      //   console.log(
+      //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+      //   );
+      // }
     } else {
-      console.log(`No charges was found yet for this ledger.`);
+      console.log(
+        `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
+      );
     }
     // console.log(charges);
     console.log("\n---");
   });
+
+  return {
+    invoicedRentTracer,
+    invoicableRentTracer,
+    activeRentTracer,
+  };
+}
+
+export function compareReservationRatesWithCharges(
+  ledgerNo: number,
+  charges: Transaction[],
+  reservationRates: RateDetails
+): any {
+  const { rates } = reservationRates;
+  const lastCharge = charges[charges.length - 1];
+  // const lastChargeDate = new Date(lastCharge.date);
+
+  const ratesTracing: any = {
+    ledgerNo,
+    appliedRates: [],
+    pendingRates: [],
+  };
+
+  for (const charge of charges) {
+    // console.log("---");
+    // console.log(`Checking charge:`);
+    // console.log(charge);
+    // console.log("---");
+    const rateMatch = rates.find((rate) => {
+      const rateDate = new Date(rate.dateToApply.replace(/-/g, "/"));
+      const chargeDate = new Date(charge.date);
+      // console.log(charge);
+
+      const rateDateDay = rateDate.getDate();
+      const rateDateMonth = rateDate.getMonth();
+      const rateDateYear = rateDate.getFullYear();
+
+      const chargeDay = chargeDate.getDate();
+      const chargeMonth = chargeDate.getMonth();
+      const chargeYear = chargeDate.getFullYear();
+
+      // console.log("Comparing...");
+      // console.log(`${rateDateYear}/${rateDateMonth}/${rateDateDay}`);
+      // console.log(`${chargeYear}/${chargeMonth}/${chargeDay}`);
+
+      if (
+        rateDateDay === chargeDay &&
+        rateDateMonth === chargeMonth &&
+        rateDateYear === chargeYear
+      ) {
+        return rate;
+      }
+    });
+
+    if (rateMatch) {
+      ratesTracing.appliedRates.push(rateMatch);
+    }
+
+    // rates.forEach((rate) => {
+    //   if (
+    //     rateDateDay === chargeDay &&
+    //     rateDateMonth === chargeMonth &&
+    //     rateDateYear === chargeYear
+    //   ) {
+    //     console.log("An applied rate was found:");
+    //     console.log(rate);
+    //     ratesTracing.appliedRates.push(rate);
+    //   } else {
+    //     console.log("Pending rate was found:");
+    //     console.log(rate);
+    //     ratesTracing.pendingRates.push(rate);
+    //   }
+    // });
+  }
+
+  const lastAppliedRate =
+    ratesTracing.appliedRates[ratesTracing.appliedRates.length - 1];
+  const lastAppliedRateIndex = rates.findIndex(
+    (rate) => rate.dateToApply === lastAppliedRate.dateToApply
+  );
+
+  const pendingRates = rates.slice(lastAppliedRateIndex + 1, rates.length);
+  ratesTracing.pendingRates = pendingRates;
+  ratesTracing.nextRateExpected = rates[lastAppliedRateIndex + 1]; // ratesTracing.expectedNextRateOn = // console.log(lastAppliedRate);
+  //   ratesTracing.pendingRates[0] ||
+  //   "There is not next rate on this reservation.";
+  // console.log(ratesTracing);
+  return ratesTracing;
 }
 
 export async function checkAllRates(
@@ -803,8 +940,16 @@ export async function checkAllRates(
   dateOut: Date
 ): Promise<any> {
   const rates = await getReservationRates(reservationId);
+  if (rates.error) {
+    return {
+      error: true,
+      type: "RATE_CODE",
+      detail: "Main rate not found.",
+    };
+  }
+
   if (rates.rates.length === 1) {
-    return;
+    return [];
   }
   const dateInms = dateIn.getTime();
   const dateOutms = dateOut.getTime();
@@ -812,8 +957,9 @@ export async function checkAllRates(
   const msDiff = dateOutms - dateInms;
   // const dayDiff = Math.floor(msDiff / (1000 * 60 * 60 * 24));
 
-  console.log("Looking for missing rates...");
-  rates.rates.forEach((rate, index) => {
+  const missingRates: string[] = [];
+  // console.log("Looking for missing rates...");
+  rates.rates.forEach((rate: Rate, index: number) => {
     const currentDate = new Date(rate.dateToApply);
     // console.log(rate.dateToApply);
     if (rates.rates[index + 1]) {
@@ -825,96 +971,144 @@ export async function checkAllRates(
       const msDiff = nextDateMs - currentDateMs;
       const dayDiff = Math.floor(msDiff / (1000 * 60 * 60 * 24));
       if (dayDiff === 1) {
-        console.log(
-          `A missing rate was found in date: (${currentDate.getFullYear()}/${currentDate.getMonth()}/${currentDate.getDate()})`
+        missingRates.push(
+          `${currentDate.getFullYear()}/${currentDate.getMonth()}/${currentDate.getDate()}`
         );
-        console.log(`Adjust rate to: (${rate.totalWTax})`);
       }
     }
   });
+
+  return missingRates;
 }
 
 export async function analyzeLedgers(
   ledgerClassification: any,
-  reservationRates: RateDetails
+  reservationId: string
 ): Promise<any> {
-  const todayDate = "2024/05/02";
+  const todayDate = "2024/05/06";
   const ledgerResults: any = [];
+  const reservationRates = await getReservationRates(reservationId);
+  // TODO: Check if there's only one payment to all reservation.
+  // if (active.length === 0) {
+  //   const defaultLedger = empty.find(
+  //     (ledger: Ledger) => ledger.status === "OPEN"
+  //   );
+  //   console.log(
+  //     `Ledger No. ${defaultLedger.ledgerNo || 1} was setted as default .`
+  //   );
 
-  const { active, invoiced, invoicable, empty } = ledgerClassification;
-  const { total, rates } = reservationRates;
-  const todayRateIndex = rates.findIndex(
-    (rate) => rate.dateToApply === todayDate
-  );
+  //   // TODO: Analyze previous ledgers
+  //   return ledgerResults;
+  // }
 
-  const todayRate = rates[todayRateIndex];
-  const previousLedgersBehavoir = getLedgersBehavior(
+  const rentTracer = await roomRentTracer(
     ledgerClassification,
     reservationRates
   );
 
-  // TODO: Check if there's only one payment to all reservation.
-  if (active.length === 0) {
-    const defaultLedger = empty.find(
-      (ledger: Ledger) => ledger.status === "OPEN"
-    );
-    console.log(
-      `Ledger No. ${defaultLedger.ledgerNo || 1} was setted as default .`
-    );
-    ledgerResults.push({
-      isDefault: true,
-      defaultLedger,
+  const { invoicedRentTracer, invoicableRentTracer, activeRentTracer } =
+    rentTracer;
+
+  // start checking from previous invoiced ledgers
+  // by following rates timeline
+  console.log("Invoicable:");
+  console.log(invoicableRentTracer);
+  console.log("Invoiced");
+  console.log(invoicedRentTracer);
+  console.log("active:");
+  console.log(activeRentTracer);
+  let nextRate: any = null;
+  let pendingRateToApply: any = null;
+  if (invoicedRentTracer.length > 0) {
+    invoicedRentTracer.forEach((rentTracing: any, index: number) => {
+      console.log("\nRent tracing:");
+      console.log(rentTracer);
+      if (!nextRate) {
+        nextRate = rentTracing.nextRateExpected;
+      } else {
+        const firstRateApplied = rentTracing.appliedRates[0];
+        if (
+          rentTracing &&
+          nextRate.dateToApply === firstRateApplied.dateToApply
+        ) {
+          console.log("Next rates match...");
+          console.log(
+            `Ledger no. ${rentTracing.ledgerNo} follows correctly ledger.no ${
+              rentTracing.ledgerNo - 1
+            }`
+          );
+          nextRate = rentTracing.nextRateExpected;
+        } else {
+          console.log(`Pending rate to charge on active ledger:`);
+          console.log(firstRateApplied);
+          pendingRateToApply = firstRateApplied;
+        }
+      }
     });
-    // TODO: Analyze previous ledgers
-    return ledgerResults;
   }
 
-  active.forEach((ledger: Ledger) => {
-    const balance = Math.abs(ledger.balance);
-    const sums = getTransactionsSum(ledger.transactions);
-    const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
+  console.log("--------");
+  console.log("Next rate");
+  console.log(nextRate);
+  console.log("--------");
 
-    // pending balance - payment required
-    if (ledger.balance > 0) {
-      console.log("----");
-      console.log(`Pending to pay: ${balance}`);
-      console.log(`Total reservation: ${total}`);
-      console.log("----");
-      ledgerResults.push({
-        hasEntirePayment: false,
-        pendingToPay: true,
-        ledger,
-      });
-    }
-
-    if (balance === total) {
-      console.log("----");
-      console.log(`Total payment was found on ledger no. ${ledger.ledgerNo}`);
-      console.log(`Total reservation: ${total}`);
-      console.log(`Total payments: ${paymentsSum}`);
-      console.log("----");
-      ledgerResults.push({
-        hasEntirePayment: true,
-        ledger,
-      });
-    }
-
-    if (balance !== total && ledger.balance < 0) {
-      const nightsPaid = getRemainingNights(
-        reservationRates,
-        balance,
-        todayDate
-      );
-      // console.log(nightsPaid);
-      console.log(`Nights left: ${nightsPaid.nightsLeft}`);
-      ledgerResults.push({
-        ledger,
-        hasEntirePayment: false,
-        nightsPaid: nightsPaid.nightsLeft,
-        // nextPaymentOn: rates[nightsPaid.nightsLeft].dateToApply,
-      });
+  activeRentTracer.forEach((rentTracing: any) => {
+    if (nextRate) {
+      // Check balance from active ledger no determinate if it pays next rate
     }
   });
+
+  // console.log(rentTracer);
+  //wTODO: Analyze room rent tracing in order to determinate reservation's payments behaviour
+
+  // console.log(rentTracer);
+
+  // active.forEach((ledger: Ledger) => {
+  //   const balance = Math.abs(ledger.balance);
+  //   const sums = getTransactionsSum(ledger.transactions);
+  //   const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
+
+  //   // pending balance - payment required
+  //   if (ledger.balance > 0) {
+  //     console.log("----");
+  //     console.log(`Pending to pay: ${balance}`);
+  //     console.log(`Total reservation: ${total}`);
+  //     console.log("----");
+  //     ledgerResults.push({
+  //       hasEntirePayment: false,
+  //       pendingToPay: true,
+  //       ledger,
+  //     });
+  //   }
+
+  //   if (balance === total) {
+  //     console.log("----");
+  //     console.log(`Total payment was found on ledger no. ${ledger.ledgerNo}`);
+  //     console.log(`Total reservation: ${total}`);
+  //     console.log(`Total payments: ${paymentsSum}`);
+  //     console.log("----");
+  //     ledgerResults.push({
+  //       hasEntirePayment: true,
+  //       ledger,
+  //     });
+  //   }
+
+  //   if (balance !== total && ledger.balance < 0) {
+  //     const nightsPaid = getRemainingNights(
+  //       reservationRates,
+  //       balance,
+  //       todayDate
+  //     );
+  //     // console.log(nightsPaid);
+  //     console.log(`Nights left: ${nightsPaid.nightsLeft}`);
+  //     ledgerResults.push({
+  //       ledger,
+  //       hasEntirePayment: false,
+  //       nightsPaid: nightsPaid.nightsLeft,
+  //       // nextPaymentOn: rates[nightsPaid.nightsLeft].dateToApply,
+  //     });
+  //   }
+  // });
 
   return ledgerResults;
 
@@ -1146,9 +1340,9 @@ export async function getReservationList(
   let reservations: Reservation[] = [];
   for (const item of items) {
     // console.log(item);
-    console.log(
-      `Loading ${item.nameGuest} - ${Number(item.room)} reservation info...`
-    );
+    // console.log(
+    //   `Loading ${item.nameGuest} - ${Number(item.room)} reservation info...`
+    // );
     const id = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
     const status = item.statusGuest.trim();
     // const ledgers = await getReservationLedgerList(id, status);
@@ -1418,7 +1612,7 @@ export async function getReservationVCC(reservationId: string): Promise<VCC> {
       // Get commerce info to complete payment payload
       const ecommerceInfo = await getEcommerceInfo(reservationId);
       if (!ecommerceInfo) {
-        console.log("Error trying to get VCC ecommerce data.");
+        // console.log("Error trying to get VCC ecommerce data.");
         return VCC;
       }
       VCC.type = ecommerceInfo.transCode;
@@ -1558,7 +1752,7 @@ export async function GetReservationRateDescription(
 
 export async function getReservationRates(
   reservationId: string
-): Promise<RateDetails> {
+): Promise<RateDetails | any> {
   if (!FRONT_API_RSRV_RATES) {
     throw new Error("Endpoint cannot be null");
   }
@@ -1566,14 +1760,18 @@ export async function getReservationRates(
   // first get rate code
   const rateCode = await getReservationRateCode(reservationId);
   if (!rateCode) {
-    throw new Error("Error trying to get rate code");
+    return {
+      error: true,
+      type: "RATE_CODE",
+      detail: "Main rate not found",
+    };
   }
 
   const FRONT_API_RSRV_RATES_MODF = FRONT_API_RSRV_RATES.replace(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/05/04")
+    .replace("{appDateField}", "2024/06/06")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
@@ -1583,9 +1781,11 @@ export async function getReservationRates(
   );
 
   if (typeof response === "string") {
-    throw new Error(
-      "Error trying to get reservation rates data. Try log in again."
-    );
+    return {
+      error: true,
+      type: "SERVER_RATE_LIST",
+      detail: "Server rate list response is not a string.",
+    };
   }
 
   const { rows } = response;
@@ -1834,39 +2034,47 @@ export async function getLedgerTransactions(ledgerCode: string): Promise<any> {
   if (!FRONT_API_RSRV_FOLIOS_MOVS) {
     throw new Error("FRONT_API_RSRV_FOLIOS endpoint cannot be undefined");
   }
-  const _FRONT_API_RSRV_FOLIOS_MOVS = FRONT_API_RSRV_FOLIOS_MOVS?.replace(
-    "{ledgerCode}",
-    ledgerCode
-  );
-  const authTokens = await TokenStorage.getData();
-  const response = await frontService.postRequest(
-    {},
-    _FRONT_API_RSRV_FOLIOS_MOVS,
-    authTokens
-  );
 
-  if (typeof response.data === "string") {
-    throw new Error(
-      `Error trying to get ledger's movements. Please try again.`
+  try {
+    const _FRONT_API_RSRV_FOLIOS_MOVS = FRONT_API_RSRV_FOLIOS_MOVS?.replace(
+      "{ledgerCode}",
+      ledgerCode
     );
-  }
+    const authTokens = await TokenStorage.getData();
+    const response = await frontService.postRequest(
+      {},
+      _FRONT_API_RSRV_FOLIOS_MOVS,
+      authTokens
+    );
 
-  // map to Transaction type
-  let transactions: Transaction[] = [];
-  transactions = response.data.map((item: any) => {
-    let transType = item.transType.includes("P ") ? "PAYMENT" : "CHARGE";
-    let amount = item.postAmount;
+    if (typeof response.data === "string") {
+      throw new Error(
+        `Error trying to get ledger's movements. Please try again.`
+      );
+    }
+
+    // map to Transaction type
+    let transactions: Transaction[] = [];
+    transactions = response.data.map((item: any) => {
+      let transType = item.transType.includes("P ") ? "PAYMENT" : "CHARGE";
+      let amount = item.postAmount;
+      return {
+        // Front2Go API uses payments with minus (-) signal to show that is a payment instead a charge
+        type: transType,
+        isRefund: transType === "PAYMENT" && amount > 0 ? true : false,
+        code: item.transCode,
+        amount,
+        date: item.postDate,
+      };
+    });
+
+    return transactions;
+  } catch (err) {
     return {
-      // Front2Go API uses payments with minus (-) signal to show that is a payment instead a charge
-      type: transType,
-      isRefund: transType === "PAYMENT" && amount > 0 ? true : false,
-      code: item.transCode,
-      amount,
-      date: item.postDate,
+      error: true,
+      errMessage: err,
     };
-  });
-
-  return transactions;
+  }
 }
 
 export async function getInvoiceReceptor(

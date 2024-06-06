@@ -14,4 +14,5 @@ export interface couponPatterns {
   couponGBT: IPatternKeys;
   couponCTS: IPatternKeys;
   couponVCI: IPatternKeys;
+  couponACCESS: IPatternKeys;
 }

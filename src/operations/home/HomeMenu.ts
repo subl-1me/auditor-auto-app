@@ -2,9 +2,7 @@ import inquirer from "inquirer";
 import { HOME_MENU_OPERATION_NAMES } from "../../consts";
 
 export default class Home {
-  constructor() {
-    console.log("inserting home into stack...");
-  }
+  constructor() {}
 
   async display(): Promise<string> {
     const questions = [

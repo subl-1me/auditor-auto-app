@@ -7,6 +7,7 @@ import Scrapper from "../../Scrapper";
 import { write, getConfig } from "../../utils/frontSystemUtils";
 
 import dotenv from "dotenv";
+import Spinnies from "spinnies";
 dotenv.config();
 
 const { FRONT_API_LOGIN_PAGE, FRONT_API_SEARCH_RSRV } = process.env;
@@ -63,6 +64,8 @@ export default class Logger {
     // get user
     const user: User = await loginMenu.display();
 
+    const spinnies = new Spinnies();
+    spinnies.add("spinner-1", { text: "Login..." });
     const verificationToken = await this.getRequestVerificationToken();
     const data = this.setupLoginFormData(user, verificationToken);
 
@@ -70,7 +73,6 @@ export default class Logger {
       data,
       FRONT_API_LOGIN_PAGE || ""
     );
-    console.log("\n\n");
 
     // If login success we should extract all remaining auth tokens
     const scrapper = new Scrapper(response.data);
@@ -91,10 +93,11 @@ export default class Logger {
 
       // get front system app and save it in local
 
+      spinnies.succeed("spinner-1", { text: "You're on." });
       menuStack.pop();
       return {
         status: 200,
-        message: "Logged successfully",
+        message: "",
         tokens: {
           mAutSession,
           verificationToken,

@@ -12,7 +12,7 @@ import InvoiceResponse from "../../types/InvoiceResponse";
 
 // Promisify
 
-import { COUPON, DEPARTURES_FILTER } from "../../consts";
+import { COUPON, DEPARTURES_FILTER, IN_HOUSE_FILTER } from "../../consts";
 
 // shared utils
 import {
@@ -82,12 +82,12 @@ export default class Invoicer {
       // we send departures array in all methods to avoid multiple requests
       case "Invoice all departures":
         const lastRsrvIndex = this.departures.findIndex(
-          (reservation) => reservation.room === 604
+          (reservation) => reservation.room === 420
         );
 
         invoicerResponse = await this.invoiceAllDepartures(
-          // this.departures
-          this.departures.slice(lastRsrvIndex, this.departures.length)
+          this.departures
+          // this.departures.slice(lastRsrvIndex, this.departures.length)
         );
         console.log(invoicerResponse);
         // if (invoicerResponse.status === 200) {
@@ -162,7 +162,7 @@ export default class Invoicer {
     const filesDir = path.join(STORAGE_TEMP_PATH || "", "invoices");
     const authTokens = await TokenStorage.getData();
     const invoiceDownloadUrl =
-      "https://front2go.cityexpress.com/F2GoServicesEngine/Invoice/CfdiOpenFile";
+      "https://front2go.whs-saas.com/F2GoServicesEngine/Invoice/CfdiOpenFile";
 
     for (const invoice of invoicesQueue) {
       let fileName = `invoice-${invoice.reservationId}.pdf`;
@@ -491,7 +491,7 @@ export default class Invoicer {
     console.log("Generating pre-invoice");
     const authTokens = await TokenStorage.getData();
     const generatePreInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/PreFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/PreFactura";
     const res = await this.frontService.postRequest(
       payloadPreInvoice,
       generatePreInvoiceAPI,
@@ -523,7 +523,7 @@ export default class Invoicer {
 
     console.log("Generating Invoice");
     const generateInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/GeneraFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/GeneraFactura";
     const res2 = await this.frontService.postRequest(
       invoicePayloadConfirmation,
       generateInvoiceAPI,
@@ -726,7 +726,7 @@ export default class Invoicer {
     console.log("Generating pre-invoice");
     const authTokens = await TokenStorage.getData();
     const generatePreInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/PreFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/PreFactura";
     const res = await this.frontService.postRequest(
       payloadPreInvoice,
       generatePreInvoiceAPI,
@@ -758,7 +758,7 @@ export default class Invoicer {
 
     console.log("Generating Invoice");
     const generateInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/GeneraFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/GeneraFactura";
     const res2 = await this.frontService.postRequest(
       invoicePayloadConfirmation,
       generateInvoiceAPI,
@@ -974,7 +974,7 @@ export default class Invoicer {
     const fileName = `${reservation.id}-register-card.pdf`;
     const fileFir = path.join(STORAGE_TEMP_PATH || "", "docsToAnalyze");
     const rsrvRegisterCardDownloadURL =
-      "https://front2go.cityexpress.com/F2goPMS/Portada/GetPdfRegistrationForm";
+      "https://front2go.whs-saas.com/F2goPMS/Portada/GetPdfRegistrationForm";
     const response = await this.frontService.downloadByUrl(
       fileName,
       fileFir,
@@ -1024,7 +1024,7 @@ export default class Invoicer {
     };
 
     const getReceptorUrl =
-      "https://front2go.cityexpress.com/F2GoServicesEngine/Autocomplete/GetReceptor";
+      "https://front2go.whs-saas.com/F2GoServicesEngine/Autocomplete/GetReceptor";
     const authTokens = await TokenStorage.getData();
     const getReceptorResponse = await this.frontService.postRequest(
       getReceptorPayload,
@@ -1054,7 +1054,7 @@ export default class Invoicer {
         message: "Invalid RFC Receptor",
       };
     }
-    const getReceptorInfoUrl = `https://front2go.cityexpress.com/F2goPMS/CFDI/GetReceptor?receptorid=${RFCReceptor.id}`;
+    const getReceptorInfoUrl = `https://front2go.whs-saas.com/F2goPMS/CFDI/GetReceptor?receptorid=${RFCReceptor.id}`;
     const getReceptorInfoResponse = await this.frontService.postRequest(
       undefined,
       getReceptorInfoUrl,
@@ -1146,7 +1146,7 @@ export default class Invoicer {
     console.log("Generating generic pre-invoice");
     const authTokens = await TokenStorage.getData();
     const generatePreInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/PreFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/PreFactura";
     const res = await this.frontService.postRequest(
       newPayloadInvoice,
       generatePreInvoiceAPI,
@@ -1173,7 +1173,7 @@ export default class Invoicer {
 
     console.log("Generating generic invoice...");
     const generateInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/GeneraFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/GeneraFactura";
     const res2 = await this.frontService.postRequest(
       defPayload,
       generateInvoiceAPI,
@@ -1353,7 +1353,7 @@ export default class Invoicer {
     console.log("Generating pre-invoice");
     const authTokens = await TokenStorage.getData();
     const generatePreInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/PreFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/PreFactura";
     const preInvoiceResponse = await this.frontService.postRequest(
       certificateDataPayload,
       generatePreInvoiceAPI,
@@ -1385,7 +1385,7 @@ export default class Invoicer {
 
     console.log("Generating Invoice");
     const generateInvoiceAPI =
-      "https://front2go.cityexpress.com/F2goPMS/CFDI/GeneraFactura";
+      "https://front2go.whs-saas.com/F2goPMS/CFDI/GeneraFactura";
     const res2 = await this.frontService.postRequest(
       invoicePayloadConfirmation,
       generateInvoiceAPI,
@@ -1483,177 +1483,60 @@ export default class Invoicer {
     return results;
   }
 
-  async loadPreview(departures: Reservation[]): Promise<any> {
+  async showInvoicingPreview(departures: Reservation[]): Promise<any> {
     // Load previous checked reservations to improve perform
     const tempStorage = new TempStorage();
-    const pitChecker = new PITChecker();
     const { checkedList } = await tempStorage.readChecked();
+    const genericList = await tempStorage.readGenericList();
 
-    const getInvoicingDataPromises: any = [];
-    for (const reservation of departures) {
-      getInvoicingDataPromises.push(await this.getInvoicingData(reservation));
-    }
-
-    const invoicingDataResults = await Promise.all(getInvoicingDataPromises);
-    const prePaidReservations = invoicingDataResults.filter((results) => {
-      if (results.RFC !== "") {
-        results.reservation.invocingData.RFC = results.RFC;
-        results.reservation.invocingData.RS = results.RS;
-        results.reservation.invocingData.sendToEmail = "";
-        return results.reservation;
-      }
-    });
-
-    const readyToInvoice: any = [];
-    const notReady: any = [];
-    const notAvailable: any = [];
-
-    const genericList = await this.tempStorage.readGenericList();
-
-    // get previous invoicing data:
-
-    for (const departure of departures) {
-      const checked = checkedList.find(
-        (checked: any) => checked.room === departure.room
-      );
-      const isGeneric = genericList.find((room) => departure.room === room);
-      if (isGeneric) {
-        readyToInvoice.push({
-          departure,
-          isGeneric: true,
+    // if(checkedList)
+    const previews: any = [];
+    departures.forEach((departure) => {
+      // Check if invoice was setted as generic
+      if (genericList.find((room) => room === departure.room)) {
+        console.log(`------------------\n`);
+        console.log(`${departure.guestName} - ${departure.room}`);
+        console.log(`GENERIC`);
+        console.log(`------------------`);
+        previews.push({
+          reservationId: departure.id,
+          room: departure.room,
+          RFC: "XAXX010101000",
+          companyName: "Generico",
+          confirm: true, // the system will set this configuration by default, it could be changed later
         });
-        continue;
-      }
-
-      const invoices = await getReservationInvoiceList(
-        departure.id,
-        departure.status
-      );
-
-      if (invoices.length > 0) {
-        const { RFC, RFCName } = invoices[0];
-        console.log("--------------\n");
-        console.log(
-          `Reservation: ${departure.guestName} - ${departure.room} previous invoicing data found.`
+      } else {
+        const isChecked = checkedList.find(
+          (checked: any) => checked.reservationId === departure.id
         );
-        console.log(`${RFCName}`);
-        console.log(`${RFC}`);
-        console.log("--------------\n");
-        readyToInvoice.push({
-          departure,
-          data: {
+        if (isChecked) {
+          const { invoiceSettings } = isChecked;
+          const { RFC, companyName } = invoiceSettings;
+          console.log(`------------------\n`);
+          console.log(`${departure.guestName} - ${departure.room}`);
+          console.log(`RFC: ${RFC || "Not found."}`);
+          console.log(`Name: ${companyName || "Not found."}`);
+          console.log(`------------------`);
+
+          previews.push({
+            reservationId: departure.id,
+            room: departure.room,
             RFC,
-            RFCName,
-          },
-        });
-
-        continue;
-      }
-
-      // console.log(checked);
-      if (!checked || checked.invoiceSettings.RFC === "") {
-        console.log("--------------\n");
-        console.log(
-          `Reservation: ${departure.guestName} - ${departure.room} has no invoicing data.`
-        );
-        const checked = await pitChecker.check(departure);
-        if (checked.error) {
-          console.log(checked.message);
-          notAvailable.push(departure);
-          continue;
-        }
-        if (checked.invoiceSettings.RFC !== "") {
-          const { RFC, companyName, repeat } = checked.invoiceSettings;
-          console.log("--------------\n");
-          console.log(
-            `Reservation: ${departure.guestName} - ${departure.room} invoicing data found.`
-          );
-          console.log(`${companyName}`);
-          console.log(`${RFC}`);
-          console.log("--------------\n");
-          readyToInvoice.push({
-            departure,
-            data: {
-              RFC,
-              companyName,
-            },
+            companyName,
+            confirm: true, // the system will set this configuration by default, it could be changed later
           });
         }
-        console.log("No invoicing data found. It was marked as manual.");
-        console.log("--------------\n");
-        notReady.push(departure);
-        continue;
       }
+    });
+    console.log(previews);
 
-      const { RFC, companyName, repeat } = checked.invoiceSettings;
-      console.log("--------------\n");
-      console.log(
-        `Reservation: ${departure.guestName} - ${departure.room} invoicing data found.`
-      );
-      console.log(`${companyName}`);
-      console.log(`${RFC}`);
-      console.log("--------------\n");
-      readyToInvoice.push({
-        departure,
-        data: {
-          RFC,
-          companyName,
-        },
-      });
-    }
-    return {
-      readyToInvoice,
-      notReady,
-    };
-  }
+    return previews;
 
-  async invoiceAllDepartures(
-    customList: Reservation[] = this.departures
-  ): Promise<any> {
-    // const previewList = await this.loadPreview(customList);
-    // const confirmPrompt = [
-    //   {
-    //     type: "confirm",
-    //     name: "confirm",
-    //     message: "Continue with automatic invoicing?",
-    //   },
-    // ];
-    // const answer = await inquirer.prompt(confirmPrompt);
-    // const confirm = answer.confirm;
-    // if (!confirm) {
-    //   console.log("Skipped.\n");
-    //   return;
-    // }
-    // console.log("\n Creating invoices...\n");
-    // const readyToInvoicePromises: any = [];
-    // const pendingToInvoicePromises: any = [];
-    // for (const departureInvoiceData of previewList.readyToInvoice) {
-    //   if (departureInvoiceData.isGeneric) {
-    //     const activeLedger = departureInvoiceData.departure.ledgers.find(
-    //       (ledger: Ledger) => ledger.isPrincipal
-    //     );
-    //     readyToInvoicePromises.push(
-    //       await this.createGenericInvoice(
-    //         departureInvoiceData.departure.id,
-    //         activeLedger.ledgerNo
-    //       )
-    //     );
-    //     continue;
-    //   }
-    //   const { RFC } = departureInvoiceData.data;
-    //   const receptorInfo = await this.getReceptorInfo(RFC);
-    //   await readyToInvoicePromises.push(
-    //     await this.createInvoice(
-    //       departureInvoiceData.departure.id,
-    //       false,
-    //       receptorInfo
-    //     )
-    //   );
-    // }
     // const getInvoicingDataPromises: any = [];
-    // for (const reservation of customList) {
+    // for (const reservation of departures) {
     //   getInvoicingDataPromises.push(await this.getInvoicingData(reservation));
     // }
+
     // const invoicingDataResults = await Promise.all(getInvoicingDataPromises);
     // const prePaidReservations = invoicingDataResults.filter((results) => {
     //   if (results.RFC !== "") {
@@ -1663,32 +1546,176 @@ export default class Invoicer {
     //     return results.reservation;
     //   }
     // });
-    // const getLedgerPromises: any = [];
-    for (const reservation of customList) {
-      console.log(
-        `Invocing to: ${reservation.guestName} - ${reservation.room}`
+
+    // const readyToInvoice: any = [];
+    // const notReady: any = [];
+    // const notAvailable: any = [];
+
+    // const genericList = await this.tempStorage.readGenericList();
+
+    // // get previous invoicing data:
+
+    // for (const departure of departures) {
+    //   const checked = checkedList.find(
+    //     (checked: any) => checked.room === departure.room
+    //   );
+    //   const isGeneric = genericList.find((room) => departure.room === room);
+    //   if (isGeneric) {
+    //     readyToInvoice.push({
+    //       departure,
+    //       isGeneric: true,
+    //     });
+    //     continue;
+    //   }
+
+    //   const invoices = await getReservationInvoiceList(
+    //     departure.id,
+    //     departure.status
+    //   );
+
+    //   if (invoices.length > 0) {
+    //     const { RFC, RFCName } = invoices[0];
+    //     console.log("--------------\n");
+    //     console.log(
+    //       `Reservation: ${departure.guestName} - ${departure.room} previous invoicing data found.`
+    //     );
+    //     console.log(`${RFCName}`);
+    //     console.log(`${RFC}`);
+    //     console.log("--------------\n");
+    //     readyToInvoice.push({
+    //       departure,
+    //       data: {
+    //         RFC,
+    //         RFCName,
+    //       },
+    //     });
+
+    //     continue;
+    //   }
+
+    //   // console.log(checked);
+    //   if (!checked || checked.invoiceSettings.RFC === "") {
+    //     console.log("--------------\n");
+    //     console.log(
+    //       `Reservation: ${departure.guestName} - ${departure.room} has no invoicing data.`
+    //     );
+    //     const checked = await pitChecker.check(departure);
+    //     if (checked.error) {
+    //       console.log(checked.message);
+    //       notAvailable.push(departure);
+    //       continue;
+    //     }
+    //     if (checked.invoiceSettings.RFC !== "") {
+    //       const { RFC, companyName, repeat } = checked.invoiceSettings;
+    //       console.log("--------------\n");
+    //       console.log(
+    //         `Reservation: ${departure.guestName} - ${departure.room} invoicing data found.`
+    //       );
+    //       console.log(`${companyName}`);
+    //       console.log(`${RFC}`);
+    //       console.log("--------------\n");
+    //       readyToInvoice.push({
+    //         departure,
+    //         data: {
+    //           RFC,
+    //           companyName,
+    //         },
+    //       });
+    //     }
+    //     console.log("No invoicing data found. It was marked as manual.");
+    //     console.log("--------------\n");
+    //     notReady.push(departure);
+    //     continue;
+    //   }
+
+    //   const { RFC, companyName, repeat } = checked.invoiceSettings;
+    //   console.log("--------------\n");
+    //   console.log(
+    //     `Reservation: ${departure.guestName} - ${departure.room} invoicing data found.`
+    //   );
+    //   console.log(`${companyName}`);
+    //   console.log(`${RFC}`);
+    //   console.log("--------------\n");
+    //   readyToInvoice.push({
+    //     departure,
+    //     data: {
+    //       RFC,
+    //       companyName,
+    //     },
+    //   });
+    // }
+    // return {
+    //   readyToInvoice,
+    //   notReady,
+    // };
+  }
+
+  async invoiceAllDepartures(
+    customList: Reservation[] = this.departures
+  ): Promise<any> {
+    // const previewList = await this.showInvoicingPreview(customList);
+    const invoicingPreview = await this.showInvoicingPreview(customList);
+
+    const skipPromptQuestion = [
+      {
+        type: "input",
+        message: "Type rooms to skip",
+        name: "roomsToSkip",
+      },
+    ];
+
+    const skipPrompt = await inquirer.prompt(skipPromptQuestion);
+    let skipList: string[] = [];
+    if (skipPrompt.roomsToSkip) {
+      skipList = skipPrompt.roomsToSkip.split(" ");
+    }
+
+    const departuresInvoicingData = invoicingPreview.filter(
+      (preview: any) => !skipList.includes(preview.room.toString())
+    );
+
+    for (const departure of customList) {
+      console.log("\n-----");
+      console.log(`Invoincig: ${departure.guestName} - ${departure.room}`);
+      console.log("-----\n");
+
+      const preLoadInvoicingData = departuresInvoicingData.find(
+        (invocingData: any) => invocingData.room === departure.room
       );
-      // if (
-      //   prePaidReservations.find((departure) => departure.id === reservation.id)
-      // ) {
-      //   if (reservation.invocingData) {
-      //     const receptorInfo = await this.getReceptorInfo(
-      //       reservation.invocingData.RFC || ""
-      //     );
-      //     const invoicerResponse = await this.createInvoice(
-      //       reservation.id,
-      //       false,
-      //       receptorInfo
-      //     );
-      //     console.log(invoicerResponse);
-      //     continue;
-      //   }
-      // }
-      const ledgers = await getReservationLedgerList(reservation.id, "CHIN");
-      reservation.ledgers = ledgers;
-      const currentLedger = reservation.ledgers.find(
-        (ledger) => ledger.transactions.length > 0 && ledger.status == "OPEN"
-      );
+      if (preLoadInvoicingData && preLoadInvoicingData.RFC) {
+        departure.ledgers = await getReservationLedgerList(
+          departure.id,
+          "CHIN"
+        );
+
+        if (preLoadInvoicingData.companyName === "Generico") {
+          console.log(
+            `Creando factura a: GENERICO - ${preLoadInvoicingData.RFC}...`
+          );
+          const ledgerTarget = await this.askForLedger(departure.ledgers);
+          const genericInvoiceResponse = await this.createGenericInvoice(
+            departure.id,
+            ledgerTarget
+          );
+          console.log(genericInvoiceResponse);
+          continue;
+        }
+
+        console.log(
+          `Creando factura a: ${preLoadInvoicingData.companyName} - ${preLoadInvoicingData.RFC}...`
+        );
+        const RFCReceptor = await this.getReceptorInfo(
+          preLoadInvoicingData.RFC
+        );
+        const createInvoiceResponse = await this.createInvoice(
+          departure.id,
+          false,
+          RFCReceptor
+        );
+        console.log(createInvoiceResponse);
+        continue;
+      }
+
       const invoiceTypeList = [
         {
           type: "list",
@@ -1696,24 +1723,21 @@ export default class Invoicer {
           choices: ["System suggestion", "Generic", "Input custom RFC", "Skip"],
         },
       ];
-      const certificate = await getReservationCertificate(reservation.id);
-      if (certificate) {
-        const certificateInvoiceResponse =
-          await this.createInvoiceWithCertificate(reservation.id, certificate);
-        console.log(certificateInvoiceResponse);
-        continue;
-      }
       const answer = await inquirer.prompt(invoiceTypeList);
       const invoiceType = answer.typeSelection;
       let selectionResponse;
       switch (invoiceType) {
         case "System suggestion":
-          selectionResponse = await this.initSystemInvoiceSuggest(reservation);
+          selectionResponse = await this.initSystemInvoiceSuggest(departure);
           break;
         case "Generic":
-          const ledgerNo = await this.askForLedger(reservation.ledgers);
+          departure.ledgers = await getReservationLedgerList(
+            departure.id,
+            "CHIN"
+          );
+          const ledgerNo = await this.askForLedger(departure.ledgers);
           selectionResponse = await this.createGenericInvoice(
-            reservation.id,
+            departure.id,
             ledgerNo
           );
           console.log(selectionResponse);
@@ -1724,7 +1748,7 @@ export default class Invoicer {
           // }
           break;
         case "Input custom RFC":
-          selectionResponse = await this.handleCustomInvoice(reservation.id);
+          selectionResponse = await this.handleCustomInvoice(departure.id);
           console.log(selectionResponse);
           // if (selectionResponse.status === 200) {
           //   printerInvoicesQueue.push(selectionResponse);
@@ -1734,7 +1758,7 @@ export default class Invoicer {
           break;
         case "Skip":
           console.log("Skipped");
-          await this.tempStorage.writePendingReservations(reservation.id);
+          await this.tempStorage.writePendingReservations(departure.id);
           // this.pendingToInvoice.push(this.departures[i].id);
           // const fileName = "pendingToInvoice.json";
           // const filePath = path.join(__dirname, fileName);
@@ -1753,76 +1777,214 @@ export default class Invoicer {
           break;
       }
     }
-    // const prePaidMethod = await PrePaid.getPrePaidMethod(reservation);
-    // if (prePaidMethod) {
-    //   if (prePaidMethod.type === COUPON) {
-    //     console.log("Invoicing to...");
-    //     // console.log(prePaidMethod.data);
-    //   }
-    // }
-    // console.log(" Invoice list:");
-    // reservation.ledgers.forEach((ledger) => {
-    //   if (ledger.isInvoiced) {
-    //     console.log(ledger.invoice);
-    //   }
-    // });
-    // console.log(" Avaialble:");
-    // reservation.ledgers.forEach((ledger) => {
-    //   if (!ledger.isInvoiced) {
-    //     console.log("- " + ledger.ledgerNo);
-    //   }
-    // });
-    // console.log("\n");
-    //   let selectionResponse;
-    //   switch (invoiceType) {
-    //     case "System suggestion":
-    //       selectionResponse = await this.initSystemInvoiceSuggest(reservation);
-    //       break;
-    //     case "Generic":
-    //       const ledgerNo = await this.askForLedger(reservation.ledgers);
-    //       selectionResponse = await this.createGenericInvoice(
-    //         reservation.id,
-    //         ledgerNo
-    //       );
-    //       console.log(selectionResponse);
-    //       // if (selectionResponse.status === 200) {
-    //       //   printerInvoicesQueue.push(selectionResponse);
-    //       //   // await this.writeInvoicesToPrint(selectionResponse);
-    //       //   await tempStorage.writeInvoicesQueue(selectionResponse);
-    //       // }
-    //       break;
-    //     case "Input custom RFC":
-    //       selectionResponse = await this.handleCustomInvoice(reservation.id);
-    //       console.log(selectionResponse);
-    //       // if (selectionResponse.status === 200) {
-    //       //   printerInvoicesQueue.push(selectionResponse);
-    //       //   // await this.writeInvoicesToPrint(selectionResponse);
-    //       //   await tempStorage.writeInvoicesQueue(selectionResponse);
-    //       // }
-    //       break;
-    //     case "Skip":
-    //       console.log("Skipped");
-    //       await this.tempStorage.writePendingReservations(reservation.id);
-    //       // this.pendingToInvoice.push(this.departures[i].id);
-    //       // const fileName = "pendingToInvoice.json";
-    //       // const filePath = path.join(__dirname, fileName);
-    //       // get data & update
-    //       // const currentData = await fs.readFile(filePath, {
-    //       //   encoding: "utf-8",
-    //       // });
-    //       // const data = JSON.stringify({ pending: this.pendingToInvoice });
-    //       // await fs.writeFile(filePath, data, { encoding: "utf8" });
-    //       // const skipperRes = await this.skipReservationInvoice(
-    //       //   this.departures[i]
-    //       // );
-    //       // console.log(skipperRes);
-    //       break;
-    //     default:
-    //       break;
-    //   }
-    // }
-    // if (customList && customList.length > 0) {
-    //   this.departures = customList;
-    // }
   }
+
+  // const invoicingPreviewPromises: any = [];
+  // for (const departure of customList) {
+  //   invoicingPreviewPromises.push(this.showInvoicingPreview(departure));
+  // }
+
+  // const preview = await Promise.all(invoicingPreviewPromises);
+  // console.log("\n Creating invoices...\n");
+  // const readyToInvoicePromises: any = [];
+  // const pendingToInvoicePromises: any = [];
+  // for (const departureInvoiceData of previewList.readyToInvoice) {
+  //   if (departureInvoiceData.isGeneric) {
+  //     const activeLedger = departureInvoiceData.departure.ledgers.find(
+  //       (ledger: Ledger) => ledger.isPrincipal
+  //     );
+  //     readyToInvoicePromises.push(
+  //       await this.createGenericInvoice(
+  //         departureInvoiceData.departure.id,
+  //         activeLedger.ledgerNo
+  //       )
+  //     );
+  //     continue;
+  //   }
+  //   const { RFC } = departureInvoiceData.data;
+  //   const receptorInfo = await this.getReceptorInfo(RFC);
+  //   await readyToInvoicePromises.push(
+  //     await this.createInvoice(
+  //       departureInvoiceData.departure.id,
+  //       false,
+  //       receptorInfo
+  //     )
+  //   );
+  // }
+  // const getInvoicingDataPromises: any = [];
+  // for (const reservation of customList) {
+  //   getInvoicingDataPromises.push(await this.getInvoicingData(reservation));
+  // }
+  // const invoicingDataResults = await Promise.all(getInvoicingDataPromises);
+  // const prePaidReservations = invoicingDataResults.filter((results) => {
+  //   if (results.RFC !== "") {
+  //     results.reservation.invocingData.RFC = results.RFC;
+  //     results.reservation.invocingData.RS = results.RS;
+  //     results.reservation.invocingData.sendToEmail = "";
+  //     return results.reservation;
+  //   }
+  // });
+  // const getLedgerPromises: any = [];
+
+  // for (const reservation of customList) {
+  //   console.log(
+  //     `Invocing to: ${reservation.guestName} - ${reservation.room}`
+  //   );
+  //   // if (
+  //   //   prePaidReservations.find((departure) => departure.id === reservation.id)
+  //   // ) {
+  //   //   if (reservation.invocingData) {
+  //   //     const receptorInfo = await this.getReceptorInfo(
+  //   //       reservation.invocingData.RFC || ""
+  //   //     );
+  //   //     const invoicerResponse = await this.createInvoice(
+  //   //       reservation.id,
+  //   //       false,
+  //   //       receptorInfo
+  //   //     );
+  //   //     console.log(invoicerResponse);
+  //   //     continue;
+  //   //   }
+  //   // }
+  //   const ledgers = await getReservationLedgerList(reservation.id, "CHIN");
+  //   reservation.ledgers = ledgers;
+  //   const currentLedger = reservation.ledgers.find(
+  //     (ledger) => ledger.transactions.length > 0 && ledger.status == "OPEN"
+  //   );
+  //   const invoiceTypeList = [
+  //     {
+  //       type: "list",
+  //       name: "typeSelection",
+  //       choices: ["System suggestion", "Generic", "Input custom RFC", "Skip"],
+  //     },
+  //   ];
+  //   const certificate = await getReservationCertificate(reservation.id);
+  //   if (certificate) {
+  //     const certificateInvoiceResponse =
+  //       await this.createInvoiceWithCertificate(reservation.id, certificate);
+  //     console.log(certificateInvoiceResponse);
+  //     continue;
+  //   }
+  //   const answer = await inquirer.prompt(invoiceTypeList);
+  //   const invoiceType = answer.typeSelection;
+  //   let selectionResponse;
+  //   switch (invoiceType) {
+  //     case "System suggestion":
+  //       selectionResponse = await this.initSystemInvoiceSuggest(reservation);
+  //       break;
+  //     case "Generic":
+  //       const ledgerNo = await this.askForLedger(reservation.ledgers);
+  //       selectionResponse = await this.createGenericInvoice(
+  //         reservation.id,
+  //         ledgerNo
+  //       );
+  //       console.log(selectionResponse);
+  //       // if (selectionResponse.status === 200) {
+  //       //   printerInvoicesQueue.push(selectionResponse);
+  //       //   // await this.writeInvoicesToPrint(selectionResponse);
+  //       //   await tempStorage.writeInvoicesQueue(selectionResponse);
+  //       // }
+  //       break;
+  //     case "Input custom RFC":
+  //       selectionResponse = await this.handleCustomInvoice(reservation.id);
+  //       console.log(selectionResponse);
+  //       // if (selectionResponse.status === 200) {
+  //       //   printerInvoicesQueue.push(selectionResponse);
+  //       //   // await this.writeInvoicesToPrint(selectionResponse);
+  //       //   await tempStorage.writeInvoicesQueue(selectionResponse);
+  //       // }
+  //       break;
+  //     case "Skip":
+  //       console.log("Skipped");
+  //       await this.tempStorage.writePendingReservations(reservation.id);
+  //       // this.pendingToInvoice.push(this.departures[i].id);
+  //       // const fileName = "pendingToInvoice.json";
+  //       // const filePath = path.join(__dirname, fileName);
+  //       // get data & update
+  //       // const currentData = await fs.readFile(filePath, {
+  //       //   encoding: "utf-8",
+  //       // });
+  //       // const data = JSON.stringify({ pending: this.pendingToInvoice });
+  //       // await fs.writeFile(filePath, data, { encoding: "utf8" });
+  //       // const skipperRes = await this.skipReservationInvoice(
+  //       //   this.departures[i]
+  //       // );
+  //       // console.log(skipperRes);
+  //       break;
+  //     default:
+  //       break;
+  //   }
+  // }
+
+  // const prePaidMethod = await PrePaid.getPrePaidMethod(reservation);
+  // if (prePaidMethod) {
+  //   if (prePaidMethod.type === COUPON) {
+  //     console.log("Invoicing to...");
+  //     // console.log(prePaidMethod.data);
+  //   }
+  // }
+  // console.log(" Invoice list:");
+  // reservation.ledgers.forEach((ledger) => {
+  //   if (ledger.isInvoiced) {
+  //     console.log(ledger.invoice);
+  //   }
+  // });
+  // console.log(" Avaialble:");
+  // reservation.ledgers.forEach((ledger) => {
+  //   if (!ledger.isInvoiced) {
+  //     console.log("- " + ledger.ledgerNo);
+  //   }
+  // });
+  // console.log("\n");
+  //   let selectionResponse;
+  //   switch (invoiceType) {
+  //     case "System suggestion":
+  //       selectionResponse = await this.initSystemInvoiceSuggest(reservation);
+  //       break;
+  //     case "Generic":
+  //       const ledgerNo = await this.askForLedger(reservation.ledgers);
+  //       selectionResponse = await this.createGenericInvoice(
+  //         reservation.id,
+  //         ledgerNo
+  //       );
+  //       console.log(selectionResponse);
+  //       // if (selectionResponse.status === 200) {
+  //       //   printerInvoicesQueue.push(selectionResponse);
+  //       //   // await this.writeInvoicesToPrint(selectionResponse);
+  //       //   await tempStorage.writeInvoicesQueue(selectionResponse);
+  //       // }
+  //       break;
+  //     case "Input custom RFC":
+  //       selectionResponse = await this.handleCustomInvoice(reservation.id);
+  //       console.log(selectionResponse);
+  //       // if (selectionResponse.status === 200) {
+  //       //   printerInvoicesQueue.push(selectionResponse);
+  //       //   // await this.writeInvoicesToPrint(selectionResponse);
+  //       //   await tempStorage.writeInvoicesQueue(selectionResponse);
+  //       // }
+  //       break;
+  //     case "Skip":
+  //       console.log("Skipped");
+  //       await this.tempStorage.writePendingReservations(reservation.id);
+  //       // this.pendingToInvoice.push(this.departures[i].id);
+  //       // const fileName = "pendingToInvoice.json";
+  //       // const filePath = path.join(__dirname, fileName);
+  //       // get data & update
+  //       // const currentData = await fs.readFile(filePath, {
+  //       //   encoding: "utf-8",
+  //       // });
+  //       // const data = JSON.stringify({ pending: this.pendingToInvoice });
+  //       // await fs.writeFile(filePath, data, { encoding: "utf8" });
+  //       // const skipperRes = await this.skipReservationInvoice(
+  //       //   this.departures[i]
+  //       // );
+  //       // console.log(skipperRes);
+  //       break;
+  //     default:
+  //       break;
+  //   }
+  // }
+  // if (customList && customList.length > 0) {
+  //   this.departures = customList;
+  // }
 }

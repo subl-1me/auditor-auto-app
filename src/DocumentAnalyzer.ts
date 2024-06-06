@@ -88,7 +88,7 @@ export default class DocumentAnalyzer {
 
   public static async classifyDocument(documentPath: string): Promise<any> {
     const documentName = path.basename(documentPath);
-    console.log(`Classifying document ${documentName}...`);
+    // console.log(`Classifying document ${documentName}...`);
     const checker = await this.isCoupon(documentPath);
     if (!checker.isCoupon) {
       return {
@@ -98,9 +98,9 @@ export default class DocumentAnalyzer {
     }
 
     if (checker.error) {
-      console.log(
-        `Error trying to read document. Try again later or check document in main system.`
-      );
+      // console.log(
+      //   `Error trying to read document. Try again later or check document in main system.`
+      // );
       return {
         error: true,
         message: `Error trying to read document. ${checker.message}`,
@@ -290,6 +290,9 @@ export default class DocumentAnalyzer {
         });
       }
       return dates;
+    }
+
+    if (couponProvider === "couponVCI") {
     }
 
     const dateInMatch = text.match(patterns.dateInPattern);

@@ -27,4 +27,5 @@ export default interface PitCheckerResult {
     companyName: string;
     emails: string[];
   };
+  totalReservation?: number;
 }

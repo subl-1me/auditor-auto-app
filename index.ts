@@ -4,6 +4,7 @@ import MenuUtils from "./src/utils/menuUtils";
 import dotenv from "dotenv";
 import {
   analyzeLedgers,
+  changeLedgerStatus,
   classifyLedgers,
   getReservationExtraFee,
   getReservationLedgerList,
@@ -11,10 +12,16 @@ import {
   getReservationRates,
   getReservationRoutings,
 } from "./src/utils/reservationUtlis";
-import { IN_HOUSE_FILTER } from "./src/consts";
+import {
+  DEPARTURES_FILTER,
+  IN_CHECK_OUT_FILTER,
+  IN_HOUSE_FILTER,
+} from "./src/consts";
 import PITChecker from "./src/operations/pit-checker/PitChecker";
+import Logger from "./src/operations/logger/Logger";
 dotenv.config();
 const pitChecker = new PITChecker();
+const logger = new Logger();
 
 async function main(): Promise<void> {
   const menuStack = new MenuStack();
@@ -22,7 +29,11 @@ async function main(): Promise<void> {
 
   // TODO: Implement a menu CONST KEYS EX: MENU_ACTION_RETURN, MENU_ACTION_
   menuStack.push(new Home());
+
+  // const loggin = await logger.performLogin(menuStack);
   // const reservations = await getReservationList(IN_HOUSE_FILTER);
+  // const checkerResult = await pitChecker.performChecker();
+
   // const reservation = reservations.find(
   //   (reservation) => reservation.room === 123
   // );
