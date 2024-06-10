@@ -86,8 +86,8 @@ export default class Invoicer {
         );
 
         invoicerResponse = await this.invoiceAllDepartures(
-          // this.departures
-          this.departures.slice(lastRsrvIndex, this.departures.length)
+          this.departures
+          // this.departures.slice(lastRsrvIndex, this.departures.length)
         );
         console.log(invoicerResponse);
         // if (invoicerResponse.status === 200) {

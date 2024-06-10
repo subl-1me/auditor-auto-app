@@ -277,17 +277,13 @@ export default class DocumentAnalyzer {
       dateOut: "",
     };
 
-    if (!patterns.bothDatesPattern) {
-      const dateInMatch = text.match(patterns.dateInPattern);
-      const dateOutMatch = text.match(patterns.dateOutPattern);
-      dates.dateIn = dateInMatch ? dateInMatch[0] : "";
-      dates.dateOut = dateOutMatch ? dateOutMatch[1] : "";
-      return dates;
-    }
-
     let monthFound = "";
     // if(couponProvider === "couponGTB")
     if (couponProvider === "couponGBT") {
+      if (!patterns.bothDatesPattern) {
+        console.log("Dates pattern was not provided by dev.");
+        return dates;
+      }
       const datesMatchSentence = text.match(patterns.bothDatesPattern);
       const datesSentence = datesMatchSentence ? datesMatchSentence[0] : "";
       const datesSentenceImprovedMatch = datesSentence
@@ -317,6 +313,11 @@ export default class DocumentAnalyzer {
     }
 
     if (couponProvider === "couponACCESS") {
+      if (!patterns.bothDatesPattern) {
+        console.log("Date pattern was not provided.");
+        return dates;
+      }
+
       const bothDates = text.match(patterns.bothDatesPattern);
       if (!bothDates) {
         console.log("Dates were not found in document.");
@@ -327,6 +328,18 @@ export default class DocumentAnalyzer {
       dates.dateOut = bothDates[1].replaceAll("-", "/");
     }
 
+    if (couponProvider === "couponCTS") {
+      const dateInMatch = text.match(patterns.dateInPattern);
+      const dateOutMatch = text.match(patterns.dateOutPattern);
+      const dateIn = dateInMatch ? dateInMatch[0] : "";
+      const dateOut = dateOutMatch ? dateOutMatch[1] : "";
+      const dateInSegments = dateIn.split("/");
+      const dateOutSements = dateOut.split("/");
+      dates.dateIn = dateInSegments.reverse().join("/");
+      dates.dateOut = dateOutSements.reverse().join("/");
+
+      return dates;
+    }
     // switch (couponProvider) {
     //   case "couponAccess":
     //     datesMatch = text.match(datesPattern);
