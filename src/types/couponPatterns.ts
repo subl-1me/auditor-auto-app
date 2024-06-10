@@ -3,10 +3,11 @@ export interface IPatternKeys {
   primaryIdentificator: RegExp;
   reservationIdTargetSentence: RegExp;
   reservationId: RegExp;
-  rfcPattern: RegExp;
+  rfcPattern?: RegExp;
   dateInPattern: RegExp;
   dateOutPattern: RegExp;
   bothDatesPattern?: RegExp;
+  totalToPay?: RegExp;
 }
 
 export interface couponPatterns {

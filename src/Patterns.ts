@@ -50,12 +50,12 @@ export const GBT_PROVIDER = "GBT";
 export const couponPatternsList: couponPatterns = {
   couponACCESS: {
     primaryIdentificator: /cupón access/,
-    reservationIdTargetSentence: new RegExp(`clave de conﬁrmación \\d+`),
-    reservationId: /\d+/,
-    rfcPattern:
-      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
+    reservationIdTargetSentence: new RegExp(/\d{8}/, "g"),
+    reservationId: /\d{8}/,
     dateInPattern: new RegExp(`\\d+\\-\\d+\\-\\d+`, "g"),
     dateOutPattern: new RegExp(`fecha de salida \\d+\\-\\d+\\-\\d+`),
+    bothDatesPattern: new RegExp(`\\d+\\-\\d+\\-\\d+`, "g"),
+    totalToPay: new RegExp(`\\$\\d+\\,\\d+\\.\\d+`),
   },
   couponGBT: {
     primaryIdentificator: /gbt travel services mexico/,
@@ -70,7 +70,6 @@ export const couponPatternsList: couponPatterns = {
     primaryIdentificator: /corporate travel services worldwide/,
     reservationIdTargetSentence: /clave(.*)\d+/,
     reservationId: /\d+/,
-    //CTS160922QLA
     rfcPattern:
       /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
     dateInPattern: /\d+\/\d+\/\d+/g,

@@ -138,6 +138,7 @@ export default class DocumentAnalyzer {
       couponProviderName
     );
 
+    const reservationTotalToPay = reservation.totalToPay;
     const { id, dateIn, dateOut } = reservation;
     let comparission: Comparission = {
       pass: false,
@@ -153,9 +154,13 @@ export default class DocumentAnalyzer {
         match: false,
         toCompare: [],
       },
+      totalToPay: {
+        match: false,
+        toCompare: [],
+      },
     };
 
-    const { reservationTarget, dates } = patternMatches;
+    const { reservationTarget, dates, totalToPay } = patternMatches;
     comparission.id.toCompare.push(id);
     comparission.id.toCompare.push(reservationTarget);
     if (id === reservationTarget) {
@@ -170,6 +175,16 @@ export default class DocumentAnalyzer {
 
     comparission.dateOutMatches.toCompare.push(dateOut);
     comparission.dateOutMatches.toCompare.push(dates.dateOut);
+    if (dateOut === dates.dateOut) {
+      comparission.dateOutMatches.match = true;
+    }
+
+    if (comparission.totalToPay && totalToPay == reservationTotalToPay) {
+      comparission.totalToPay.toCompare.push(totalToPay);
+      comparission.totalToPay.toCompare.push(reservationTotalToPay);
+      comparission.totalToPay.match = true;
+    }
+
     if (dateOut === dates.dateOut) {
       comparission.dateOutMatches.match = true;
     }
@@ -246,6 +261,7 @@ export default class DocumentAnalyzer {
       RFC: this.matchRFC(text, patterns, couponProvider),
       reservationTarget: this.matchReservationIdTarget(text, patterns),
       dates: this.matchDates(text, patterns, couponProvider),
+      totalToPay: this.matchAmount(text, patterns),
     };
     return analyzerResult;
   }
@@ -261,10 +277,18 @@ export default class DocumentAnalyzer {
       dateOut: "",
     };
 
+    if (!patterns.bothDatesPattern) {
+      const dateInMatch = text.match(patterns.dateInPattern);
+      const dateOutMatch = text.match(patterns.dateOutPattern);
+      dates.dateIn = dateInMatch ? dateInMatch[0] : "";
+      dates.dateOut = dateOutMatch ? dateOutMatch[1] : "";
+      return dates;
+    }
+
     let monthFound = "";
     // if(couponProvider === "couponGTB")
     if (couponProvider === "couponGBT") {
-      const datesMatchSentence = text.match(patterns.bothDatesPattern || /d/);
+      const datesMatchSentence = text.match(patterns.bothDatesPattern);
       const datesSentence = datesMatchSentence ? datesMatchSentence[0] : "";
       const datesSentenceImprovedMatch = datesSentence
         ? datesSentence.match(/\d+-.{3}-\d+/g)
@@ -284,21 +308,24 @@ export default class DocumentAnalyzer {
               dateSentence = dateSentence
                 .replace(month, months[month as keyof IMonths])
                 .replace(/-/g, "/");
+
               dates.dateIn = dateSentence;
             }
           });
         });
       }
-      return dates;
     }
 
-    if (couponProvider === "couponVCI") {
+    if (couponProvider === "couponACCESS") {
+      const bothDates = text.match(patterns.bothDatesPattern);
+      if (!bothDates) {
+        console.log("Dates were not found in document.");
+        return dates;
+      }
+      // model 2024/06/06
+      dates.dateIn = bothDates[0].replaceAll("-", "/");
+      dates.dateOut = bothDates[1].replaceAll("-", "/");
     }
-
-    const dateInMatch = text.match(patterns.dateInPattern);
-    const dateOutMatch = text.match(patterns.dateOutPattern);
-    dates.dateIn = dateInMatch ? dateInMatch[0] : "";
-    dates.dateOut = dateOutMatch ? dateOutMatch[1] : "";
 
     // switch (couponProvider) {
     //   case "couponAccess":
@@ -327,6 +354,21 @@ export default class DocumentAnalyzer {
     return dates;
   }
 
+  private static matchAmount(text: string, pattern: IPatternKeys): number {
+    let amount = 0;
+    const amountPattern = pattern.totalToPay;
+    if (amountPattern) {
+      const amountMatch = text.match(amountPattern);
+      const amountString = amountMatch ? amountMatch[0] : "";
+      const amount = Number(
+        amountString.replaceAll("$", "").replaceAll(",", "")
+      );
+      return amount;
+    }
+
+    return amount;
+  }
+
   private static matchType(text: string, patterns: IPatternKeys): string {
     const typeMatch = text.match(patterns.primaryIdentificator);
     return typeMatch ? typeMatch[0].toUpperCase() : "";
@@ -338,6 +380,10 @@ export default class DocumentAnalyzer {
     couponProvider: string
   ): string {
     let RFC = "";
+    if (!patterns.rfcPattern) {
+      return RFC;
+    }
+
     const RFCMatch = text.match(patterns.rfcPattern);
     if (couponProvider === "couponGBT") {
       RFC = RFCMatch ? RFCMatch[0].replace(/-/g, "").toLocaleUpperCase() : "";

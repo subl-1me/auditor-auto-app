@@ -13,6 +13,7 @@ export default interface Reservation {
   status: string;
   company: string;
   agency: string;
+  totalToPay?: number;
   prePaidMethod?: PrePaidMethod;
   invocingData?: {
     RFC: string;

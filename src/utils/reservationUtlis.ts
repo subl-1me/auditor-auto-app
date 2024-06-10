@@ -155,6 +155,9 @@ export async function getReservationById(
   reservation.room = Number(reservationData.room);
   reservation.dateIn = reservationData.dateIn;
   reservation.dateOut = reservationData.dateOut;
+
+  const rates = await getReservationRates(reservation.id);
+  reservation.totalToPay = rates.total || 0;
   return reservation;
 }
 
@@ -1346,6 +1349,7 @@ export async function getReservationByFilter(filter: string): Promise<any> {
   if (!items[0]) {
     return null;
   }
+
   const reservation: Reservation = {
     id: items[0].rsrvCode,
     guestName: items[0].nameGuest,
@@ -1357,6 +1361,9 @@ export async function getReservationByFilter(filter: string): Promise<any> {
     agency: items[0].agency,
     ledgers: [],
   };
+
+  const rates = await getReservationRates(reservation.id);
+  reservation.totalToPay = rates.total || 0;
   return reservation;
 }
 /**
@@ -1425,6 +1432,7 @@ export async function getReservationList(
     //     return ledger;
     //   }
     // });
+    const rates = await getReservationRates(id);
     const reservation: Reservation = {
       id,
       guestName: item.nameGuest,
@@ -1435,6 +1443,7 @@ export async function getReservationList(
       company: item.company,
       agency: item.agency,
       ledgers: [],
+      totalToPay: rates.total || 0,
     };
     reservations.push(reservation);
     //save on local only if it doesnt appear
@@ -1843,7 +1852,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/06/06")
+    .replace("{appDateField}", "2024/06/09")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

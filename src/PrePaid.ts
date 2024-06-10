@@ -159,6 +159,7 @@ export default class PrePaid {
     let mainCoupon;
     const analyzerResults = await Promise.all(analyzerPromises);
     analyzerResults.forEach((result, index) => {
+      console.log(result);
       if (result.comparission.pass) {
         mainCoupon = {
           result,

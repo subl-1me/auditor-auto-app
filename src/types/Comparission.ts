@@ -1,6 +1,6 @@
 interface Match {
   match: boolean;
-  toCompare: string[];
+  toCompare: any[];
 }
 
 export default interface Comparission {
@@ -8,4 +8,5 @@ export default interface Comparission {
   id: Match;
   dateInMatches: Match;
   dateOutMatches: Match;
+  totalToPay?: Match;
 }

@@ -15,9 +15,12 @@ import {
   checkAllRates,
   classifyLedgers,
   analyzeLedgers,
+  getReservationInvoiceList,
 } from "../../utils/reservationUtlis";
 import {
   CERTIFICATE,
+  CHECK_ALL,
+  CHECK_NEWER,
   COUPON,
   ERROR,
   FULLY_PAID,
@@ -40,6 +43,7 @@ import { TempStorage } from "../../utils/TempStorage";
 import path from "path";
 import TokenStorage from "../../utils/TokenStorage";
 import { Rate } from "../../types/RateDetails";
+import inquirer from "inquirer";
 
 const { STORAGE_TEMP_PATH } = process.env;
 const docsTempStoragePath = path.join(STORAGE_TEMP_PATH || "", "docsToAnalyze");
@@ -145,6 +149,11 @@ export default class PITChecker {
     // }
   }
 
+  async handelSaving(check: PitCheckerResult, checkType: string): Promise<any> {
+    if (checkType === CHECK_ALL) {
+    }
+  }
+
   async performChecker(): Promise<any> {
     // Setup initial configuration
     const spinnies = new Spinnies();
@@ -156,6 +165,18 @@ export default class PITChecker {
     //   (reservation) => reservation.room === 305
     // );
     // const probReserv = reservations.slice(sliceIndex, reservations.length);
+
+    const optionPrompt = [
+      {
+        type: "list",
+        name: "checkType",
+        message: "Select an option",
+        choices: ["All", "Newer"],
+      },
+    ];
+
+    const promptResponse = await inquirer.prompt(optionPrompt);
+    const { checkType } = promptResponse;
 
     let rsrvComplete: any[] = [];
     let rsrvPaidNights: any[] = [];
@@ -169,14 +190,26 @@ export default class PITChecker {
     let rsrvWithCertificate: any[] = [];
     let rsrvWithCoupon: any[] = [];
     let rsrvWithVirtualCard: any[] = [];
+    const { checkedList } = await tempStorage.readChecked();
 
     // console.log(`Checking all reservations...`);
     spinnies.add("spinner-2", { text: "Checking reservations..." });
     const checkPromises: any = [];
     for (const reservation of reservations) {
-      checkPromises.push(await this.check(reservation));
+      if (checkType === CHECK_NEWER) {
+        if (
+          checkedList.find(
+            (result: PitCheckerResult) =>
+              result.reservationId === reservation.id
+          )
+        )
+          //skip
+          console.log(`Skipping: ${reservation.room} - Already checked`);
+        continue;
+      } else {
+        checkPromises.push(await this.check(reservation, { checkType }));
+      }
     }
-    const { checkedList } = await tempStorage.readChecked();
     const results = await Promise.all(checkPromises);
     for (const result of results) {
       // console.log(result);
@@ -355,8 +388,31 @@ export default class PITChecker {
     return analyzerData;
   }
 
-  async check(reservation: Reservation): Promise<any> {
+  async setRepeatInvoice(
+    reservation: Reservation,
+    result: PitCheckerResult
+  ): Promise<any> {
+    const invoices = await getReservationInvoiceList(
+      reservation.id,
+      reservation.status
+    );
+    if (invoices.length > 0) {
+      // return reference
+      result.invoiceSettings.RFC = invoices[0].RFC;
+      result.invoiceSettings.repeat = true;
+      result.invoiceSettings.companyName = invoices[0].RFCName;
+    }
+
+    return result;
+  }
+
+  async check(
+    reservation: Reservation,
+    options = { checkType: CHECK_ALL }
+  ): Promise<any> {
     const tempStorage = new TempStorage();
+    await tempStorage.createDefaultCheckedList();
+
     // console.log("\n");
     // console.log(`Checking ${reservation.guestName} - ${reservation.room}...`);
     let result: PitCheckerResult = {
@@ -430,6 +486,7 @@ export default class PITChecker {
     // TODO: Add an implemetation of a "RATE CHECKER" to avoid problems with future rates
     // console.log("Searching for pre-paid methods...");
     const prePaidMethod = await PrePaid.getPrePaidMethod(reservation);
+    console.log(reservation);
     if (prePaidMethod) {
       // if (ledgerClassification.active.length > 0) {
       //   ledgerClassification.active[0].isPrincipal = true;
@@ -566,6 +623,8 @@ export default class PITChecker {
       return result;
     }
 
+    result = await this.setRepeatInvoice(reservation, result);
+
     const balanceAbs = Math.abs(activeLedger.balance);
     const balance = activeLedger.balance;
     const ratesDetail = await getReservationRates(reservation.id);
@@ -579,7 +638,7 @@ export default class PITChecker {
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/06/06";
+    const todayDate = "2024/06/09";
 
     if (balance >= 0) {
       // console.log("Payment status: required");
@@ -637,6 +696,7 @@ export default class PITChecker {
       const diff = Number(
         parseFloat((total - paymentsSum).toString()).toFixed(2)
       );
+      // Extra things
       result.paymentStatus = ERROR;
       result.hasErrors = true;
       result.errorDetail.type = "Diff rates";
@@ -655,10 +715,12 @@ export default class PITChecker {
       result.nightsPaid = nights;
       result.paymentStatus = PARTIAL_PAID;
       await tempStorage.writeChecked(result); // save on local
+      result = await this.setRepeatInvoice(reservation, result);
       return result;
     }
 
     // // console.log("\n");
+
     await tempStorage.writeChecked(result); // save on local
     return result;
 

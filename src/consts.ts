@@ -3,6 +3,10 @@ export const DEPARTURES_FILTER = "departures";
 export const IN_HOUSE_FILTER = "in-house";
 export const IN_CHECK_OUT_FILTER = "CHOUT";
 
+// Checker types
+export const CHECK_ALL = "All";
+export const CHECK_NEWER = "Newer";
+
 // invoice status
 // it is on spanish because the API's language is spanish
 export const INVOICED = "Timbrado";

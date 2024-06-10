@@ -82,12 +82,12 @@ export default class Invoicer {
       // we send departures array in all methods to avoid multiple requests
       case "Invoice all departures":
         const lastRsrvIndex = this.departures.findIndex(
-          (reservation) => reservation.room === 420
+          (reservation) => reservation.room === 620
         );
 
         invoicerResponse = await this.invoiceAllDepartures(
-          this.departures
-          // this.departures.slice(lastRsrvIndex, this.departures.length)
+          // this.departures
+          this.departures.slice(lastRsrvIndex, this.departures.length)
         );
         console.log(invoicerResponse);
         // if (invoicerResponse.status === 200) {
@@ -585,6 +585,16 @@ export default class Invoicer {
       reservationId,
       currentReservation.status
     );
+    const invoices = await getReservationInvoiceList(reservationId, "CHIN");
+    ledgers.forEach((ledger) => {
+      const hasInvoice = invoices.find(
+        (invoice) => invoice.ledgerNo === ledger.ledgerNo
+      );
+      if (hasInvoice) {
+        ledger.invoice = hasInvoice;
+        ledger.isInvoiced = true;
+      }
+    });
     // const activeLedger = ledgers.find((ledger) => ledger.status === "OPEN");
     const ledgerTargetNo = await this.askForLedger(ledgers);
     const ledgerTarget = ledgers.find(

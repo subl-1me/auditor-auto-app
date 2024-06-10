@@ -29,6 +29,7 @@ export class TempStorage {
       const deleteRes = await fsAsync.unlink(filePath);
       console.log(deleteRes);
     } catch (err: any) {
+      console.log("is here");
       console.log(err);
       return {
         status: 400,
@@ -169,6 +170,7 @@ export class TempStorage {
         message: "File saved.",
       };
     } catch (err) {
+      console.log("invoices queue");
       console.log(err);
       return {
         status: 400,
@@ -195,6 +197,7 @@ export class TempStorage {
         message: "Data uploaded.",
       };
     } catch (err) {
+      console.log("wirte on");
       console.log(err);
       return [];
     }
@@ -217,8 +220,8 @@ export class TempStorage {
       //     message: "DUPLICATE",
       //   };
       // }
-      data.checkedList.push(reservation);
 
+      data.checkedList.push(reservation);
       await fsAsync.writeFile(CHECKED_LIST_PATH, JSON.stringify(data), "utf8");
 
       return {
@@ -226,12 +229,17 @@ export class TempStorage {
         message: "File updated.",
       };
     } catch (err) {
+      console.log("write checked");
       console.log(err);
       return [];
     }
   }
 
   async readChecked(): Promise<any> {
+    if (!fs.existsSync(CHECKED_LIST_PATH)) {
+      await this.createDefaultCheckedList();
+    }
+
     try {
       const jsonDataText = await fsAsync.readFile(CHECKED_LIST_PATH, "utf-8");
       const jsonDataParsed = JSON.parse(jsonDataText);
@@ -242,7 +250,7 @@ export class TempStorage {
     }
   }
 
-  private async createDefaultCheckedList(): Promise<any> {
+  public async createDefaultCheckedList(): Promise<any> {
     try {
       let defaultData = {
         PENDING: [],
@@ -257,6 +265,7 @@ export class TempStorage {
         ROUTER: [],
         ROUTED: [],
         ERROR: [],
+        HISTORY: [],
         checkedList: [],
       };
 

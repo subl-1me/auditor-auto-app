@@ -3,6 +3,7 @@ export interface DocAnalyzerResult {
   RFC: string;
   reservationTarget: string;
   dates: couponDates;
+  totalToPay?: number;
 }
 
 interface couponDates {
