@@ -1254,6 +1254,7 @@ export async function getVirtualPostList(): Promise<Reservation[]> {
     rcss: "",
     user: "HTJUGALDEA",
   };
+  ``;
 
   const authTokens = TokenStorage.getData();
   const response = await frontService.postRequest(
@@ -1400,7 +1401,6 @@ export async function getReservationList(
     AddGuest: false,
   };
 
-  const tempStorage = new TempStorage();
   const authTokens = await TokenStorage.getData();
   const response = await frontService.postRequest(
     listOptions,
@@ -1432,7 +1432,6 @@ export async function getReservationList(
     //     return ledger;
     //   }
     // });
-    const rates = await getReservationRates(id);
     const reservation: Reservation = {
       id,
       guestName: item.nameGuest,
@@ -1443,7 +1442,6 @@ export async function getReservationList(
       company: item.company,
       agency: item.agency,
       ledgers: [],
-      totalToPay: rates.total || 0,
     };
     reservations.push(reservation);
     //save on local only if it doesnt appear
@@ -1852,7 +1850,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/06/09")
+    .replace("{appDateField}", "2024/06/17")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

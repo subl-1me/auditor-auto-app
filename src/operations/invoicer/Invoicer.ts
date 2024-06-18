@@ -82,7 +82,7 @@ export default class Invoicer {
       // we send departures array in all methods to avoid multiple requests
       case "Invoice all departures":
         const lastRsrvIndex = this.departures.findIndex(
-          (reservation) => reservation.room === 620
+          (reservation) => reservation.room === 324
         );
 
         invoicerResponse = await this.invoiceAllDepartures(
@@ -745,7 +745,10 @@ export default class Invoicer {
 
     if (res.data.errormessage !== "") {
       console.log("Error trying to create pre-invoice.");
-      throw new Error(res.data.errormessage);
+      return {
+        error: true,
+        message: res.data.errormessage,
+      };
     }
 
     const invoiceReceiptId = res.data.comprobanteId;
@@ -777,7 +780,10 @@ export default class Invoicer {
 
     if (res2.data.errormessage !== "") {
       console.log("Error trying to create invoice.");
-      throw new Error(res2.data.errormessage);
+      return {
+        error: true,
+        message: res2.data.errormessage,
+      };
     }
 
     // https://front2go.cityexpress.com/WHS-PMS/CFDI/OpenFile.aspx?pName='G:\CFDI\IPJ030829QDA\17217442.pdf'&Type=PDF&comprobante=17217442
@@ -1499,6 +1505,7 @@ export default class Invoicer {
     const { checkedList } = await tempStorage.readChecked();
     const genericList = await tempStorage.readGenericList();
 
+    // console.log(checkedList);
     // if(checkedList)
     const previews: any = [];
     departures.forEach((departure) => {

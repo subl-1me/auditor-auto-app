@@ -411,7 +411,7 @@ export default class PITChecker {
     options = { checkType: CHECK_ALL }
   ): Promise<any> {
     const tempStorage = new TempStorage();
-    await tempStorage.createDefaultCheckedList();
+    // await tempStorage.createDefaultCheckedList();
 
     // console.log("\n");
     // console.log(`Checking ${reservation.guestName} - ${reservation.room}...`);
@@ -486,7 +486,6 @@ export default class PITChecker {
     // TODO: Add an implemetation of a "RATE CHECKER" to avoid problems with future rates
     // console.log("Searching for pre-paid methods...");
     const prePaidMethod = await PrePaid.getPrePaidMethod(reservation);
-    console.log(reservation);
     if (prePaidMethod) {
       // if (ledgerClassification.active.length > 0) {
       //   ledgerClassification.active[0].isPrincipal = true;
@@ -624,7 +623,6 @@ export default class PITChecker {
     }
 
     result = await this.setRepeatInvoice(reservation, result);
-
     const balanceAbs = Math.abs(activeLedger.balance);
     const balance = activeLedger.balance;
     const ratesDetail = await getReservationRates(reservation.id);
@@ -635,10 +633,11 @@ export default class PITChecker {
       await tempStorage.writeChecked(result); // save on local
       return result;
     }
+
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/06/09";
+    const todayDate = "2024/06/17";
 
     if (balance >= 0) {
       // console.log("Payment status: required");
@@ -696,6 +695,7 @@ export default class PITChecker {
       const diff = Number(
         parseFloat((total - paymentsSum).toString()).toFixed(2)
       );
+
       // Extra things
       result.paymentStatus = ERROR;
       result.hasErrors = true;

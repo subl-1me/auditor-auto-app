@@ -95,7 +95,6 @@ export default class Utils {
 
       case "Create routing to Virtual Folio":
         const postingList = await ReservationUtils.getVirtualPostList();
-        console.log(postingList);
         break;
       default:
         console.log("Invalid util operation");
@@ -154,14 +153,18 @@ export default class Utils {
       IN_HOUSE_FILTER
     );
 
-    const rsrvParent = reservationsInHome.find(
+    let rsrvParent = reservationsInHome.find(
       (reservation) =>
         reservation.id === parent || reservation.room === Number(parent)
     );
 
     if (!rsrvParent) {
       console.log("Room not found.");
-      return;
+      rsrvParent = await ReservationUtils.getReservationById(parent);
+      if (!rsrvParent) {
+        console.log("FMV not found.");
+        return;
+      }
     }
 
     console.log(rsrvParent);
