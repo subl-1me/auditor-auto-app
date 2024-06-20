@@ -6,6 +6,8 @@ import {
   analyzeLedgers,
   changeLedgerStatus,
   classifyLedgers,
+  getReservationByFilter,
+  getReservationById,
   getReservationExtraFee,
   getReservationLedgerList,
   getReservationList,
@@ -19,6 +21,7 @@ import {
 } from "./src/consts";
 import PITChecker from "./src/operations/pit-checker/PitChecker";
 import Logger from "./src/operations/logger/Logger";
+import DocumentAnalyzer from "./src/DocumentAnalyzer";
 dotenv.config();
 const pitChecker = new PITChecker();
 const logger = new Logger();
@@ -30,6 +33,25 @@ async function main(): Promise<void> {
   // TODO: Implement a menu CONST KEYS EX: MENU_ACTION_RETURN, MENU_ACTION_
   menuStack.push(new Home());
 
+  const filePath =
+    "C:\\Users\\julio\\Documents\\dev-projects\\auditor-auto-app\\temp\\docsToAnalyze\\1219417-3-document.pdf";
+
+  const reservation = await getReservationByFilter("323");
+  const classification = await DocumentAnalyzer.classifyDocument(filePath);
+  const result = await DocumentAnalyzer.compare(
+    filePath,
+    reservation,
+    classification.providerName
+  );
+
+  // console./slog(result);
+  // conso
+  console.log(result.patternMatches);
+  console.log(result.comparission.id);
+  console.log(result.comparission.dateInMatches);
+  console.log(result.comparission.dateOutMatches);
+  console.log(result.comparission.totalToPay);
+  console.log(result.comparission.ratePerDay);
   // const loggin = await logger.performLogin(menuStack);
   // const reservations = await getReservationList(IN_HOUSE_FILTER);
   // const checkerResult = await pitChecker.performChecker();

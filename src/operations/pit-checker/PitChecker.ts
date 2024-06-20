@@ -486,6 +486,7 @@ export default class PITChecker {
     // TODO: Add an implemetation of a "RATE CHECKER" to avoid problems with future rates
     // console.log("Searching for pre-paid methods...");
     const prePaidMethod = await PrePaid.getPrePaidMethod(reservation);
+    console.log(prePaidMethod);
     if (prePaidMethod) {
       // if (ledgerClassification.active.length > 0) {
       //   ledgerClassification.active[0].isPrincipal = true;
@@ -637,7 +638,7 @@ export default class PITChecker {
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/06/17";
+    const todayDate = "2024/06/19";
 
     if (balance >= 0) {
       // console.log("Payment status: required");

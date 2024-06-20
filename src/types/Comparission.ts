@@ -9,4 +9,5 @@ export default interface Comparission {
   dateInMatches: Match;
   dateOutMatches: Match;
   totalToPay?: Match;
+  ratePerDay?: Match;
 }

@@ -82,7 +82,7 @@ export default class Invoicer {
       // we send departures array in all methods to avoid multiple requests
       case "Invoice all departures":
         const lastRsrvIndex = this.departures.findIndex(
-          (reservation) => reservation.room === 324
+          (reservation) => reservation.room === 609
         );
 
         invoicerResponse = await this.invoiceAllDepartures(

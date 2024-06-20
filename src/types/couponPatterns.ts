@@ -8,12 +8,15 @@ export interface IPatternKeys {
   dateOutPattern: RegExp;
   bothDatesPattern?: RegExp;
   totalToPay?: RegExp;
+  ratePerDay?: RegExp;
 }
 
 export interface couponPatterns {
-  // couponAccess: IPatternKeys;
   couponGBT: IPatternKeys;
   couponCTS: IPatternKeys;
   couponVCI: IPatternKeys;
   couponACCESS: IPatternKeys;
+  couponBAUSER: IPatternKeys;
+  couponFLIGHT: IPatternKeys;
+  couponVILLA: IPatternKeys;
 }

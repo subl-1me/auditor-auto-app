@@ -44,6 +44,9 @@ export const ACCESS = "CUPÓN ACCESS";
 export const GTB = "GTB TRAVEL SERVICES MEXICO";
 export const CTS = "CORPORATE TRAVEL SERVICES WORLDWIDE";
 
+// Providers RFC LIST
+export const VCI_RFC = "VCI0004041R0";
+
 //  Principal-Menu skeleton
 export const HOME_MENU_OPERATION_NAMES = [
   "Login",

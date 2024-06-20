@@ -63,7 +63,6 @@ export default class Logger {
 
     // get user
     const user: User = await loginMenu.display();
-
     const spinnies = new Spinnies();
     spinnies.add("spinner-1", { text: "Login..." });
     const verificationToken = await this.getRequestVerificationToken();
@@ -92,7 +91,6 @@ export default class Logger {
       const mAutSession = mAutSessionCookie.split("=")[1];
 
       // get front system app and save it in local
-
       spinnies.succeed("spinner-1", { text: "You're on." });
       menuStack.pop();
       return {
@@ -106,9 +104,11 @@ export default class Logger {
         },
       };
     } catch (err: any) {
-      console.log("An error occured trying to login.");
-      console.log(err);
-      throw new Error(err.message);
+      return {
+        status: 400,
+        message: "An unexpected error ocurred trying to login.",
+        err,
+      };
     }
   }
 

@@ -2,11 +2,12 @@ import { readPdfText } from "pdf-text-reader";
 import * as Patterns from "./patterns";
 import { couponPatterns, IPatternKeys } from "./types/couponPatterns";
 import { DocAnalyzerResult } from "./types/DocAnalyzerResult";
-import { ACCESS, GTB, CTS, UNSUPPORTED, COUPON } from "./consts";
+import { ACCESS, GTB, CTS, UNSUPPORTED, COUPON, VCI_RFC } from "./consts";
 import Comparission from "./types/Comparission";
 import Reservation from "./types/Reservation";
-import GuaranteeDoc from "./types/GuaranteeDoc";
 import path from "path";
+import { getReservationRates } from "./utils/reservationUtlis";
+import { Rate } from "./types/RateDetails";
 
 // Auxiliar interface to handle months inside documents's text
 interface IMonths {
@@ -37,6 +38,21 @@ const months: IMonths = {
   oct: "10",
   nov: "11",
   dic: "12",
+};
+
+const monthsSpanish: any = {
+  enero: months.ene,
+  febrero: months.feb,
+  marzo: months.mar,
+  abril: months.abr,
+  mayo: months.may,
+  junio: months.jun,
+  julio: months.jul,
+  agosto: months.ago,
+  septiembre: months.sep,
+  octube: months.oct,
+  noviembre: months.nov,
+  diciembre: months.dic,
 };
 
 const couponPatternsList: couponPatterns = Patterns.couponPatternsList;
@@ -158,9 +174,13 @@ export default class DocumentAnalyzer {
         match: false,
         toCompare: [],
       },
+      ratePerDay: {
+        match: false,
+        toCompare: [],
+      },
     };
 
-    const { reservationTarget, dates, totalToPay } = patternMatches;
+    const { reservationTarget, dates, totalToPay, ratePerDay } = patternMatches;
     comparission.id.toCompare.push(id);
     comparission.id.toCompare.push(reservationTarget);
     if (id === reservationTarget) {
@@ -185,8 +205,25 @@ export default class DocumentAnalyzer {
       comparission.totalToPay.match = true;
     }
 
-    if (dateOut === dates.dateOut) {
-      comparission.dateOutMatches.match = true;
+    if (comparission.ratePerDay) {
+      const ratesDetail = await getReservationRates(reservation.id);
+      const { rates } = ratesDetail;
+
+      const ratesSet = new Set();
+      rates.forEach((rate: Rate) => {
+        ratesSet.add(rate.totalNoTax);
+      });
+
+      if (ratesSet.size > 1) {
+        comparission.ratePerDay.match = false;
+        comparission.ratePerDay.toCompare.push(ratePerDay);
+      }
+
+      if (ratesSet.size === 1) {
+        comparission.ratePerDay.match = true;
+        comparission.ratePerDay.toCompare.push(ratePerDay);
+        comparission.ratePerDay.toCompare.push(ratePerDay);
+      }
     }
 
     const idMatches = comparission.id.match;
@@ -212,45 +249,6 @@ export default class DocumentAnalyzer {
     };
   }
 
-  private static async extractData(filePath: string): Promise<any> {
-    try {
-      const pdfText = (await readPdfText({ url: filePath })).toLowerCase();
-
-      const couponPatternsList: couponPatterns = Patterns.couponPatternsList;
-      const couponPatternsNames = Object.keys(couponPatternsList);
-      for (const couponName of couponPatternsNames) {
-        const couponPatterns =
-          couponPatternsList[couponName as keyof couponPatterns];
-
-        const primaryIdentificatorMatcher = pdfText.match(
-          couponPatterns.primaryIdentificator
-        );
-        if (primaryIdentificatorMatcher) {
-          const coupon = this.improveCouponPatternMatches(
-            couponPatterns,
-            pdfText,
-            couponName
-          );
-
-          return {
-            error: false,
-            result: coupon,
-          };
-        }
-      }
-
-      return {
-        error: true,
-        message: "Document is not supported.",
-      };
-    } catch (err: any) {
-      return {
-        error: true,
-        message: err.message,
-      };
-    }
-  }
-
   private static improveCouponPatternMatches(
     patterns: IPatternKeys,
     text: string,
@@ -262,6 +260,7 @@ export default class DocumentAnalyzer {
       reservationTarget: this.matchReservationIdTarget(text, patterns),
       dates: this.matchDates(text, patterns, couponProvider),
       totalToPay: this.matchAmount(text, patterns),
+      ratePerDay: this.matchRatePerDay(text, patterns, couponProvider),
     };
     return analyzerResult;
   }
@@ -340,6 +339,40 @@ export default class DocumentAnalyzer {
 
       return dates;
     }
+
+    if (couponProvider === "couponVCI") {
+      const dateInMatch = text.match(patterns.dateInPattern);
+      const dateOutMatch = text.match(patterns.dateOutPattern);
+
+      const monthsSpanishKeys = Object.keys(monthsSpanish);
+
+      monthsSpanishKeys.forEach((key) => {
+        if (dateInMatch && dateInMatch[0].includes(key)) {
+          const dateInMatchPars = dateInMatch[0].replace(
+            key,
+            monthsSpanish[key]
+          );
+
+          const matchSegments = dateInMatchPars.split(" ").reverse();
+          dates.dateIn = `${matchSegments[0]}/${
+            matchSegments[2]
+          }/${matchSegments[1].replace(",", "")}`;
+        }
+
+        if (dateOutMatch && dateOutMatch[0].includes(key)) {
+          const dateInMatchPars = dateOutMatch[0].replace(
+            key,
+            monthsSpanish[key]
+          );
+
+          const matchSegments = dateInMatchPars.split(" ").reverse();
+          dates.dateOut = `${matchSegments[0]}/${
+            matchSegments[2]
+          }/${matchSegments[1].replace(",", "")}`;
+        }
+      });
+    }
+
     // switch (couponProvider) {
     //   case "couponAccess":
     //     datesMatch = text.match(datesPattern);
@@ -370,6 +403,7 @@ export default class DocumentAnalyzer {
   private static matchAmount(text: string, pattern: IPatternKeys): number {
     let amount = 0;
     const amountPattern = pattern.totalToPay;
+
     if (amountPattern) {
       const amountMatch = text.match(amountPattern);
       const amountString = amountMatch ? amountMatch[0] : "";
@@ -397,13 +431,37 @@ export default class DocumentAnalyzer {
       return RFC;
     }
 
-    const RFCMatch = text.match(patterns.rfcPattern);
+    let RFCMatch = text.match(patterns.rfcPattern);
+    RFC = RFCMatch ? RFCMatch[0].toUpperCase() : "";
+
+    // special cases where RFC isn't included in coupon
+    if (couponProvider === "couponVCI") {
+      RFC = VCI_RFC;
+    }
+
     if (couponProvider === "couponGBT") {
       RFC = RFCMatch ? RFCMatch[0].replace(/-/g, "").toLocaleUpperCase() : "";
-    } else {
-      RFC = RFCMatch ? RFCMatch[0].toUpperCase() : "";
     }
+
     return RFC;
+  }
+
+  private static matchRatePerDay(
+    text: string,
+    patterns: IPatternKeys,
+    provider: string
+  ) {
+    let rate = 0;
+    if (!patterns.ratePerDay) {
+      return rate;
+    }
+
+    if (provider === "couponVCI") {
+      const ratePerDayMatch = text.match(patterns.ratePerDay);
+      rate = ratePerDayMatch ? Number(ratePerDayMatch[0].match(/\d+/)) : 0;
+    }
+
+    return rate;
   }
 
   private static matchReservationIdTarget(

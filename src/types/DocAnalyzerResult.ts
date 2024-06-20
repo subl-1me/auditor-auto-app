@@ -4,6 +4,7 @@ export interface DocAnalyzerResult {
   reservationTarget: string;
   dates: couponDates;
   totalToPay?: number;
+  ratePerDay?: number;
 }
 
 interface couponDates {

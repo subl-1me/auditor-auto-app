@@ -1525,7 +1525,7 @@ export async function getReservationNotes(
   );
 
   if (!response.rows) {
-    console.log("Error trying to get reservatio notes.");
+    console.log("Error trying to get reservation notes.");
     return [];
   }
 
@@ -1850,7 +1850,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/06/17")
+    .replace("{appDateField}", "2024/06/19")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
