@@ -1,8 +1,6 @@
-import PrePaid from "../PrePaid";
-import GuaranteeDoc from "./GuaranteeDoc";
 import Ledger from "./Ledger";
-import VCC from "./VCC";
 import PrePaidMethod from "../types/PrePaidMethod";
+import LedgerClassification from "./LedgerClassification";
 
 export default interface Reservation {
   id: string;
@@ -21,4 +19,5 @@ export default interface Reservation {
     sendToEmail: string;
   };
   ledgers: Ledger[];
+  ledgerClassification?: LedgerClassification;
 }

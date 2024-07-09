@@ -117,7 +117,7 @@ export default class Noktos {
         }
         // close current ledger
         const changeLedgerStatuesRes =
-          await reservationUtils.changeLedgerStatus(
+          await reservationUtils.toggleLedgerStatus(
             reservation.id,
             currentLedger.ledgerNo,
             ""

@@ -2,6 +2,7 @@ import Ledger from "./Ledger";
 import PrePaidMethod from "./PrePaidMethod";
 
 export default interface PitCheckerResult {
+  guest: string;
   reservationId: string;
   room: Number | number;
   paymentStatus: string;
@@ -28,4 +29,5 @@ export default interface PitCheckerResult {
     emails: string[];
   };
   totalReservation?: number;
+  checkDate: Date;
 }

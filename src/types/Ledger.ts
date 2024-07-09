@@ -2,6 +2,7 @@ import Invoice from "./Invoice";
 import Transaction from "./Transaction";
 
 export default interface Ledger {
+  reservationId: string;
   ledgerNo: number;
   isPrincipal?: boolean;
   status: string;

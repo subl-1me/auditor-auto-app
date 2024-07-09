@@ -572,6 +572,7 @@ export async function getReservationLedgerList(
     const isPrincipal =
       ledger && !isEmpty && ledger.folioStatus === "OPEN" ? true : false;
     ledgerList.push({
+      reservationId,
       ledgerNo: ledger.numFolio,
       status: ledger.folioStatus,
       balance: balance ? Number(balance) : 0,
@@ -1180,11 +1181,11 @@ export async function classifyLedgers(
 
   const invoicable = ledgers.filter(
     (ledger) =>
-      ledger.status === "CLOSED" &&
       ledger.transactions.length > 0 &&
       ledger.transactions.find(
         (transaction) => transaction.type === "CHARGE"
       ) &&
+      ledger.balance === 0 &&
       !ledger.invoice
   );
 
@@ -1222,6 +1223,7 @@ export async function classifyLedgers(
 
   return {
     // ledgers,
+    reservationId,
     active,
     invoicable,
     invoiced,
@@ -1850,7 +1852,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/06/19")
+    .replace("{appDateField}", "2024/07/07")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
@@ -2297,7 +2299,7 @@ export async function initializeLedgerInvoice(
   };
 }
 
-export async function changeLedgerStatus(
+export async function toggleLedgerStatus(
   reservationId: string,
   ledgerNo: Number | number,
   reservationStatus: string
@@ -2326,13 +2328,14 @@ export async function changeLedgerStatus(
   if (response.data !== "ok") {
     return {
       status: 400,
-      message: `Error trying to change ledger no. ${ledgerNo} status.`,
+      message: `Error trying to change ledger status: ${response.data}`,
     };
   }
 
   return {
     status: 200,
     message: "OK",
+    ledgerNo: Number(response.data || 1),
   };
 }
 

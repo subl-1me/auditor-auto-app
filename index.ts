@@ -4,7 +4,6 @@ import MenuUtils from "./src/utils/menuUtils";
 import dotenv from "dotenv";
 import {
   analyzeLedgers,
-  changeLedgerStatus,
   classifyLedgers,
   getReservationByFilter,
   getReservationById,

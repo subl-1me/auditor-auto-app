@@ -208,8 +208,12 @@ export default class PITChecker {
         continue;
       } else {
         checkPromises.push(await this.check(reservation, { checkType }));
+        spinnies.update("spinner-2", {
+          text: `Checking ${reservation.guestName} - ${reservation.room}`,
+        });
       }
     }
+
     const results = await Promise.all(checkPromises);
     for (const result of results) {
       // console.log(result);
@@ -416,6 +420,7 @@ export default class PITChecker {
     // console.log("\n");
     // console.log(`Checking ${reservation.guestName} - ${reservation.room}...`);
     let result: PitCheckerResult = {
+      guest: reservation.guestName,
       reservationId: reservation.id,
       room: reservation.room,
       routing: {
@@ -444,6 +449,7 @@ export default class PITChecker {
         companyName: "",
         emails: [],
       },
+      checkDate: new Date(),
     };
 
     // console.log(rateChecker);
@@ -486,7 +492,6 @@ export default class PITChecker {
     // TODO: Add an implemetation of a "RATE CHECKER" to avoid problems with future rates
     // console.log("Searching for pre-paid methods...");
     const prePaidMethod = await PrePaid.getPrePaidMethod(reservation);
-    console.log(prePaidMethod);
     if (prePaidMethod) {
       // if (ledgerClassification.active.length > 0) {
       //   ledgerClassification.active[0].isPrincipal = true;
@@ -638,7 +643,7 @@ export default class PITChecker {
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/06/19";
+    const todayDate = "2024/07/07";
 
     if (balance >= 0) {
       // console.log("Payment status: required");

@@ -3,5 +3,6 @@ export default interface InvoiceResponse {
   reservationId: string;
   invoiceStatus: string;
   RFC: string;
+  error: string;
   invoiceReceiptId: string;
 }

@@ -25,6 +25,7 @@ export default class PrePaidApplier {
     this.departures = this.departures.filter(
       (reservation) => !reservation.guestName.includes("AEROBUS")
     );
+
     for (const reservation of this.departures) {
       console.log(
         `Searching ${reservation.guestName} - ${reservation.room} for VCC, coupons or certificates...`

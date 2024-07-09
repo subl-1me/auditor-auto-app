@@ -12,6 +12,23 @@ export const CHECK_NEWER = "Newer";
 export const INVOICED = "Timbrado";
 export const PRE_INVOICED = "PreFactura";
 
+// Invoicing default receptors info
+export const GENERIC_RECEPTOR_ID = "43";
+export const GENERIC_RECEPTOR_RFC = "XAXX010101000";
+export const GENERIC_RECEPTOR_NAME = "Generico";
+
+export const MARRIOTT_RECEPTOR_ID = "132939";
+export const MARRIOTT_RECEPTOR_RFC = "XEXX010101000";
+export const MARRIOTT_RECEPTOR_NAME = "MARRIOTT SWITZERLAND LICENSING COMPANY";
+
+// Invoicing fiscal uses
+export const NO_FISCAL_USE = "S01";
+export const GENERAL_USE = "G03";
+
+// Invoicing modes
+export const MANUAL = "MANUAL";
+export const ASSISTED = "ASSISTED";
+
 // Virtual card providers
 export const EXPEDIA = "EXPEDIA";
 export const BOOKING = "BOOKING";
