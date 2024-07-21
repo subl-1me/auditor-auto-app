@@ -643,7 +643,7 @@ export default class PITChecker {
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/07/07";
+    const todayDate = "2024/07/20";
 
     if (balance >= 0) {
       // console.log("Payment status: required");

@@ -9,6 +9,8 @@ import { readPdfText } from "pdf-text-reader";
 import { TempStorage } from "../../utils/TempStorage";
 import DocAnalyzer from "../../DocumentAnalyzer";
 import InvoiceResponse from "../../types/InvoiceResponse";
+import InvoicePayload from "./types/InvoicePayload";
+import InvoicingTypeResponse from "./types/InvoicingTypeResponse";
 
 import {
   ASSISTED,
@@ -26,6 +28,8 @@ import {
   MARRIOTT_RECEPTOR_RFC,
   NO_FISCAL_USE,
   PRE_INVOICED,
+  PREPARE_MAIN_LEDGER_VALIDATOR,
+  RECEPTOR_VALIDATOR,
 } from "../../consts";
 
 import {
@@ -42,6 +46,7 @@ import path from "path";
 import RFCReceptor from "../../types/RFCReceptor";
 import PrePaid from "../../PrePaid";
 import LedgerClassification from "../../types/LedgerClassification";
+import Invoice from "../../types/Invoice";
 
 const {
   FRONT_API_GET_RECEPTOR_DETAILS,
@@ -248,14 +253,185 @@ export default class Invoicer {
   ): Promise<any> {}
 
   private regroupInvoice(createInvoiceResponse: InvoiceResponse): void {
-    const { invoiceStatus, error } = createInvoiceResponse;
+    const { invoice, error } = createInvoiceResponse;
     if (error) {
       this.errors.push(createInvoiceResponse);
     } else {
-      invoiceStatus === INVOICED
+      invoice?.status === INVOICED
         ? this.invoices.push(createInvoiceResponse)
         : this.preInvoices.push(createInvoiceResponse);
     }
+  }
+
+  private async handleInvoicingType(
+    invoiceType: string,
+    departure: Reservation,
+    fiscalData: any,
+    ledgerTarget: Number
+  ): Promise<any> {
+    let invoicingResponse: InvoicingTypeResponse = {
+      invoiceType,
+      hasError: false,
+      errors: [],
+      success: false,
+    };
+
+    const handleReceptorValidator = async (RFC: string) => {
+      if (!RFC || RFC === "") {
+        return null;
+      }
+
+      const receptorResponse = await this.getReceptorInfo(RFC);
+      if (receptorResponse.error) {
+        invoicingResponse.hasError = true;
+        invoicingResponse.errors.push({
+          type: RECEPTOR_VALIDATOR,
+          detail: `Error validating RFC: ${receptorResponse.message}`,
+        });
+      }
+
+      return receptorResponse;
+    };
+
+    const handleMainLedgerPreparation = async (ledgerTarget: Number) => {
+      const preparationResponse = await this.prepareReservationMainLedger(
+        departure,
+        ledgerTarget
+      );
+
+      if (!preparationResponse.readyToInvoice) {
+        invoicingResponse.hasError = true;
+        invoicingResponse.errors.push({
+          type: PREPARE_MAIN_LEDGER_VALIDATOR,
+          detail: `Error preparing main ledger: ${preparationResponse.message}`,
+        });
+      }
+    };
+
+    await handleMainLedgerPreparation(ledgerTarget);
+    if (invoicingResponse.hasError) {
+      console.log("The invoice cannot be done due the following error:");
+      invoicingResponse.errors.forEach((error) => {
+        console.log(`* ${error.type} - ${error.detail}`);
+      });
+      console.log("\n");
+    }
+
+    let RFCReceptor;
+    if (fiscalData && fiscalData.RFC) {
+      const receptorResponse = await handleReceptorValidator(fiscalData.RFC);
+      RFCReceptor = receptorResponse.receptorInfo;
+    }
+
+    let createInvoiceResponse;
+    try {
+      switch (invoiceType) {
+        case "System suggestion":
+          if (!RFCReceptor) {
+            console.log("No system suggest data was found.");
+            break;
+          }
+
+          createInvoiceResponse = await this.createInvoice(
+            departure,
+            ledgerTarget,
+            RFCReceptor
+          );
+
+          // invoicingResponse.invoice = createInvoiceResponse.invoice;
+
+          this.regroupInvoice(createInvoiceResponse);
+          break;
+        case "Generic":
+          const genericReceptor = await handleReceptorValidator(
+            GENERIC_RECEPTOR_RFC
+          );
+          if (genericReceptor.error) {
+            console.log(
+              `Error trying to validate RFC receptor (${GENERIC_RECEPTOR_RFC}).`
+            );
+            break;
+          }
+
+          if (!(await this.confirmFiscalData(genericReceptor.receptorInfo))) {
+            break;
+          }
+
+          createInvoiceResponse = await this.createInvoice(
+            departure,
+            ledgerTarget,
+            genericReceptor.receptorInfo
+          );
+          this.regroupInvoice(createInvoiceResponse);
+          break;
+        case "Input custom RFC":
+          let receptorInfo;
+          do {
+            const RFC = await this.askForRFC();
+            if (RFC === "EXIT") {
+              break;
+            }
+
+            console.clear();
+            console.log("Validating RFC...");
+            const receptorValidator = await handleReceptorValidator(RFC);
+            if (!receptorValidator.error) {
+              receptorInfo = receptorValidator.receptorInfo;
+              break;
+            }
+
+            console.log(`\nError trying to search RFC:`);
+            console.log(receptorValidator.message);
+          } while (true);
+
+          if (!(await this.confirmFiscalData(receptorInfo))) {
+            break;
+          }
+
+          createInvoiceResponse = await this.createInvoice(
+            departure,
+            ledgerTarget,
+            receptorInfo
+          );
+          this.regroupInvoice(createInvoiceResponse);
+          break;
+        case "Skip":
+          await this.tempStorage.writePendingReservations(departure.id);
+          break;
+        default:
+          break;
+      }
+
+      return invoicingResponse;
+    } catch (err) {
+      console.log(err);
+      return {
+        status: 400,
+        err,
+      };
+    }
+  }
+
+  async confirmFiscalData(fiscalData: any): Promise<boolean> {
+    console.log("\n--------------");
+    console.log(`CONFIRM INVOICE DATA:`);
+    console.log("----------------\n");
+    console.log(`RFC: ${fiscalData.receptorRfc}`);
+    console.log(`Name: ${fiscalData.receptorNombre}`);
+    console.log(`Postal code: ${fiscalData.receptorCpostal}`);
+    console.log(`Regimen: ${fiscalData.receptorRegimen}`);
+    console.log("----------\n");
+    const confirmPrompt = [
+      {
+        type: "confirm",
+        name: "confirm",
+        message: "Is data correct?",
+      },
+    ];
+
+    const confirmPrompAns = await inquirer.prompt(confirmPrompt);
+    const confirm = confirmPrompAns.confirm;
+    return confirm;
   }
 
   private async performManualInvoicing(
@@ -270,18 +446,25 @@ export default class Invoicer {
       },
     ];
 
+    console.log("\nInvoicing preview:");
+    console.log("---------------");
+    console.log(invoicingPreview);
+    console.log("---------------\n");
+
     const skipPrompt = await inquirer.prompt(skipPromptQuestion);
-    let skipList: string[] = [];
+    let skipList: Number[] = [];
     if (skipPrompt.roomsToSkip) {
-      skipList = skipPrompt.roomsToSkip.split(" ");
+      skipList = skipPrompt.roomsToSkip
+        .split(" ")
+        .map((room: string) => Number(room));
     }
 
     const notGenericDepartures = invoicingPreview.filter(
-      (preview: any) => !skipList.includes(preview.room.toString())
+      (preview: any) => !skipList.includes(preview.room)
     );
 
     const genericDepartures = invoicingPreview.filter((preview: any) =>
-      skipList.includes(preview.room.toString())
+      skipList.includes(preview.room)
     );
 
     for (const departure of departures) {
@@ -289,7 +472,7 @@ export default class Invoicer {
       console.log(`Invoicing: ${departure.guestName} - ${departure.room}`);
       console.log("------------------------------------------------------\n");
 
-      const fiscalData = notGenericDepartures.find(
+      let fiscalData = notGenericDepartures.find(
         (invocingData: any) => invocingData.room === departure.room
       );
 
@@ -303,11 +486,36 @@ export default class Invoicer {
         console.log(`RFC: ${fiscalData.RFC}`);
         console.log(`Company: ${fiscalData.companyName}`);
         console.log("-----------------------------");
+      } else {
+        fiscalData = await this.initSystemInvoiceSuggest(departure);
       }
 
       if (isGeneric) {
         console.log("Generic");
+        fiscalData = {
+          RFC: GENERIC_RECEPTOR_RFC,
+          companyName: GENERIC_RECEPTOR_NAME,
+        };
         console.log("----------------------------");
+      }
+
+      let ledgerTarget: Number = 0;
+      if (departure.ledgerClassification) {
+        const ledgerTargetSuggest = await this.getSuggestedLedger(departure);
+        console.log(`Suggested ledger: ${ledgerTargetSuggest}`);
+        ledgerTarget = await this.askForLedger(departure.ledgerClassification);
+      }
+
+      if (fiscalData && fiscalData.receptorRfc) {
+        if (await this.confirmFiscalData(fiscalData)) {
+          const suggestInvoicingResponse = await this.createInvoice(
+            departure,
+            ledgerTarget,
+            fiscalData
+          );
+          console.log(suggestInvoicingResponse);
+          continue;
+        }
       }
 
       console.log("\n\n");
@@ -319,74 +527,39 @@ export default class Invoicer {
         },
       ];
 
-      const answer = await inquirer.prompt(invoiceTypeList);
-      const invoiceType = answer.typeSelection;
-      let createInvoiceResponse;
+      const invoceTypePrompt = await inquirer.prompt(invoiceTypeList);
+      const invoiceType = invoceTypePrompt.typeSelection;
 
-      let ledgerTarget: Number = 0;
-      if (departure.ledgerClassification) {
-        const ledgerTargetSuggest = await this.getSuggestedLedger(departure);
-        console.log(`Suggested ledger: ${ledgerTargetSuggest}`);
-        ledgerTarget = await this.askForLedger(departure.ledgerClassification);
-      }
+      const invoicingResponse = await this.handleInvoicingType(
+        invoiceType,
+        departure,
+        fiscalData,
+        ledgerTarget
+      );
 
-      switch (invoiceType) {
-        case "System suggestion":
-          createInvoiceResponse = await this.createInvoice(
-            departure,
-            ledgerTarget,
-            fiscalData
-          );
-          this.regroupInvoice(createInvoiceResponse);
-          break;
-        case "Generic":
-          createInvoiceResponse = await this.createInvoice(
-            departure,
-            ledgerTarget,
-            { RFC: GENERIC_RECEPTOR_RFC, companyName: GENERIC_RECEPTOR_NAME }
-          );
-          this.regroupInvoice(createInvoiceResponse);
-          break;
-        case "Input custom RFC":
-          const RFCReceptor = await this.askForRFC();
-          createInvoiceResponse = await this.createInvoice(
-            departure,
-            ledgerTarget,
-            RFCReceptor
-          );
-          this.regroupInvoice(createInvoiceResponse);
-          break;
-        case "Skip":
-          await this.tempStorage.writePendingReservations(departure.id);
-          break;
-        default:
-          break;
-      }
+      console.log(invoicingResponse);
     }
+
+    // for (const invoiceResponse of this.invoices) {
+    //   const printerResponse = await this.printInvoiceDoc(invoiceResponse);
+    // }
   }
 
   private async askForRFC(): Promise<any> {
-    let RFCReceptor;
-    do {
-      console.log("\n--------------------------------");
-      const RFCInputQuestion = [
-        {
-          type: "input",
-          name: "RFC",
-          message: "Input RFC to invoice:",
-        },
-      ];
+    console.log("\n--------------------------------");
+    const RFCInputQuestion = [
+      {
+        type: "input",
+        name: "RFC",
+        message: "Input RFC to invoice:",
+      },
+    ];
 
-      const input = await inquirer.prompt(RFCInputQuestion);
-      const RFC = input.RFC;
-      console.clear();
-      console.log("Validating RFC...");
-      RFCReceptor = await this.getReceptorInfo(RFC);
-      if (RFCReceptor.error) {
-        console.log(RFCReceptor.message);
-      }
-      console.log("-------------------------------------\n");
-    } while (!RFCReceptor.receptorRfc);
+    const input = await inquirer.prompt(RFCInputQuestion);
+    const RFC = input.RFC;
+    console.log("-------------------------------------\n");
+
+    return RFC;
   }
 
   private async printInvoiceDoc(
@@ -396,8 +569,16 @@ export default class Invoicer {
     const authTokens = await TokenStorage.getData();
     const fileName = `invoice-${invoiceResponse.reservationId}.pdf`;
 
+    if (!invoiceResponse.invoice) {
+      console.log(`No invoice exists for this reservation.`);
+      return {
+        status: 400,
+        message: "No invoice was found.",
+      };
+    }
+
     const downloaderPayload = {
-      comprobanteId: invoiceResponse.invoiceReceiptId,
+      comprobanteId: invoiceResponse.invoice.receiptId,
       type: "PDF",
       user: "HTJUGALDEA",
     };
@@ -546,37 +727,85 @@ export default class Invoicer {
     reservation: Reservation,
     ledgerTarget: Number
   ): Promise<any> {
+    let ledgerPreparation = {
+      readyToInvoice: false,
+      message: "",
+      ledgerTarget,
+    };
+
     const mainLedger = reservation.ledgers.find(
       (ledger) => ledger.ledgerNo === Number(ledgerTarget)
     );
     if (!mainLedger) {
-      console.log("Main ledger not found.");
-      return;
+      ledgerPreparation.message = "Main ledger not found.";
+      return ledgerPreparation;
     }
 
-    // Always add 1 extra ledger to avoid some problems
-    await addNewLegder(reservation.id);
+    if (ledgerTarget === 8) {
+      ledgerPreparation.message = "This reservation has max. ledgers (8).";
+      return ledgerPreparation;
+    }
+
+    if (mainLedger.status === "CLOSED" && !mainLedger.isInvoiced) {
+      ledgerPreparation.readyToInvoice = true;
+      return ledgerPreparation;
+    }
+
+    const addLedgerResponse = await addNewLegder(reservation.id);
     const toggleResponse = await toggleLedgerStatus(
       reservation.id,
       mainLedger.ledgerNo,
       reservation.status
     );
+    ledgerPreparation.readyToInvoice = true;
+    return ledgerPreparation;
+  }
 
-    return toggleResponse;
+  private setupInvoicePayload(
+    reservation: Reservation,
+    fiscalData: any,
+    ledgerTarget: Number
+  ): InvoicePayload {
+    let invoicePayload: InvoicePayload = {
+      username: "HTJUGALDEA",
+      propCode: "CECJS",
+      folioCode: `${reservation.id}.${ledgerTarget}`,
+      guestCode: reservation.id,
+      receptorId: fiscalData.receptorId,
+      tipoDetalle: "D",
+      currency: "MXN",
+      notas: "",
+      doctype: GENERAL_USE,
+      receptorNameModified: fiscalData.receptorNombre,
+      receptorCP_Modified: "",
+      historico: false,
+      impuestopais: "",
+    };
+
+    // Special use cases
+    if (
+      fiscalData.receptorId === MARRIOTT_RECEPTOR_ID ||
+      fiscalData.receptorId === GENERIC_RECEPTOR_ID
+    ) {
+      invoicePayload.doctype = NO_FISCAL_USE;
+    }
+
+    if (fiscalData.receptorId === MARRIOTT_RECEPTOR_ID) {
+      invoicePayload.notas = fiscalData.certificateId;
+    }
+
+    return invoicePayload;
   }
 
   private async createInvoice(
     reservation: Reservation,
     ledgerTarget: Number,
     fiscalData: any
-  ): Promise<any> {
+  ): Promise<InvoiceResponse> {
     let invoicerResponse: InvoiceResponse = {
       status: 200,
       error: "",
-      reservationId: "",
-      invoiceStatus: "",
-      RFC: "",
-      invoiceReceiptId: "",
+      reservationId: reservation.id,
     };
 
     const currentReservation = this.departures.find(
@@ -587,93 +816,18 @@ export default class Invoicer {
       console.log("Error trying to get reservation data");
       invoicerResponse.status = 400;
       invoicerResponse.error = "Reservation data not found.";
-      return;
-    }
-
-    //TODO: Create a validator implementation
-    const RFCReceptor = await this.getReceptorInfo(fiscalData.RFC);
-    if (RFCReceptor.error) {
-      invoicerResponse.status = 400;
-      invoicerResponse.error = RFCReceptor.message;
-      console.log("----------------");
-      console.log("Invoice cannot be done due the following error:");
-      console.log(RFCReceptor.message);
-      console.log("----------------");
       return invoicerResponse;
     }
 
-    console.log("\n--------------");
-    console.log(`CONFIRM INVOICE DATA:`);
-    console.log("----------------\n");
-    console.log(`LEDGER TARGET: ${ledgerTarget}`);
-    console.log(`RFC: ${RFCReceptor.receptorRfc}`);
-    console.log(`Name: ${RFCReceptor.receptorNombre}`);
-    console.log(`Postal code: ${RFCReceptor.receptorCpostal}`);
-    console.log(`Regimen: ${RFCReceptor.receptorRegimen}`);
-    console.log("----------\n");
-    const confirmPrompt = [
-      {
-        type: "confirm",
-        name: "confirm",
-        message: "Is data correct?",
-      },
-    ];
-
-    const answer = await inquirer.prompt(confirmPrompt);
-    const confirm = answer.confirm;
-
-    if (!confirm) {
-      console.log("Skipped.\n");
-      return;
-    }
-
-    const mainLedger = await this.prepareReservationMainLedger(
+    let invoicePayload = this.setupInvoicePayload(
       reservation,
+      fiscalData,
       ledgerTarget
     );
 
-    if (!mainLedger.ledgerNo) {
-      console.log("\n------------");
-      console.log(
-        `Ledger ${ledgerTarget} cannot be invoiced due the following error:`
-      );
-      console.log(`${mainLedger.message}`);
-      console.log("------------\n");
-      invoicerResponse.status = 400;
-      invoicerResponse.error = mainLedger.message;
-      return invoicerResponse;
-    }
-
-    let invoicePayload = {
-      username: "HTJUGALDEA",
-      propCode: "CECJS",
-      folioCode: `${reservation.id}.${ledgerTarget}`,
-      guestCode: reservation.id,
-      receptorId: RFCReceptor.receptorId,
-      tipoDetalle: "D",
-      currency: "MXN",
-      notas: "",
-      doctype: GENERAL_USE,
-      receptorNameModified: RFCReceptor.receptorNombre,
-      receptorCP_Modified: "",
-      historico: false,
-      comprobanteid: "",
-      impuestopais: "",
-    };
-
-    // Special use cases
-    if (
-      RFCReceptor.receptorId === MARRIOTT_RECEPTOR_ID ||
-      RFCReceptor.receptorId === GENERIC_RECEPTOR_ID
-    ) {
-      invoicePayload.doctype = NO_FISCAL_USE;
-    }
-
-    if (RFCReceptor.receptorId === MARRIOTT_RECEPTOR_ID) {
-      invoicePayload.notas = fiscalData.certificateId;
-    }
-
-    console.log(`Creating invoice for: ${reservation.guestName}...`);
+    console.log(
+      `CREATING INVOICE FOR: ${reservation.room} - ${reservation.guestName}...`
+    );
     let invoiceCreationResponse;
     const authTokens = await TokenStorage.getData();
     invoiceCreationResponse = await this.frontService.postRequest(
@@ -692,10 +846,15 @@ export default class Invoicer {
       return invoicerResponse;
     }
 
-    invoicerResponse.invoiceStatus = PRE_INVOICED;
-    invoicerResponse.RFC = RFCReceptor.receptorRfc;
+    let invoice: Invoice = {
+      ledgerNo: ledgerTarget,
+      RFC: fiscalData.receptorRfc,
+      RFCName: fiscalData.receptorNombre,
+      status: PRE_INVOICED,
+    };
 
     const invoiceReceiptId = invoiceCreationResponse.data.comprobanteId;
+    invoice.receiptId = invoiceReceiptId;
     invoicePayload.comprobanteid = invoiceReceiptId;
     invoicePayload.receptorNameModified = "";
 
@@ -716,7 +875,12 @@ export default class Invoicer {
       return invoicerResponse;
     }
 
-    invoicerResponse.invoiceStatus = INVOICED;
+    console.log(`Invoice was created successfully. ${fiscalData.receptorRfc}`);
+    invoice.status = INVOICED;
+    invoicerResponse.invoice = invoice;
+
+    await this.printInvoiceDoc(invoicerResponse);
+    console.log(invoicerResponse);
     return invoicerResponse;
   }
 
@@ -901,11 +1065,14 @@ export default class Invoicer {
       };
     }
 
+    const FRONT_API_GET_RECEPTOR_DETAILS_MODF =
+      FRONT_API_GET_RECEPTOR_DETAILS?.replace("{receptorId}", RFCReceptor.id);
     const getReceptorInfoResponse = await this.frontService.postRequest(
       undefined,
-      FRONT_API_GET_RECEPTOR_DETAILS || "",
+      FRONT_API_GET_RECEPTOR_DETAILS_MODF || "",
       authTokens
     );
+
     const receptorInfo = getReceptorInfoResponse.data;
     if (!receptorInfo) {
       return {
@@ -913,7 +1080,10 @@ export default class Invoicer {
         message: "Empty receptor info.",
       };
     }
-    return receptorInfo;
+    return {
+      error: false,
+      receptorInfo,
+    };
   }
 
   async initSystemInvoiceSuggest(reservation: Reservation): Promise<any> {
@@ -922,21 +1092,10 @@ export default class Invoicer {
       reservation.id
     );
     if (registerCardAnalyzer && registerCardAnalyzer.RFC !== "") {
-      console.log("Data found:");
-      console.log(registerCardAnalyzer);
-      //TODO: if active ledger balance === 0 continue with invoice & suggest
-      // Confirm existing data
-      const receptorInfo = await this.getReceptorInfo(registerCardAnalyzer.RFC);
-      const createInvoiceRes = await this.createInvoice(
-        reservation,
-        1,
-        receptorInfo
-      );
-      return createInvoiceRes;
+      return registerCardAnalyzer;
     }
-    if (!registerCardAnalyzer) {
-      return null;
-    }
+
+    return null;
   }
 
   async writeInvoicesToPrint(invoiceResult: any): Promise<void> {
@@ -1201,7 +1360,7 @@ export default class Invoicer {
           ) {
             previews.push({
               reservationId: departure.id,
-              rom: departure.room,
+              room: departure.room,
               RFC: MARRIOTT_RECEPTOR_RFC,
               companyName: MARRIOTT_RECEPTOR_NAME,
               certificateId: isChecked.prePaidMethod.data,

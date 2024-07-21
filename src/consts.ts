@@ -3,6 +3,10 @@ export const DEPARTURES_FILTER = "departures";
 export const IN_HOUSE_FILTER = "in-house";
 export const IN_CHECK_OUT_FILTER = "CHOUT";
 
+// INVOICING VALIDATOR ERRORS
+export const RECEPTOR_VALIDATOR = "RECEPTOR";
+export const PREPARE_MAIN_LEDGER_VALIDATOR = "MAIN_LEDGER";
+
 // Checker types
 export const CHECK_ALL = "All";
 export const CHECK_NEWER = "Newer";
@@ -13,11 +17,11 @@ export const INVOICED = "Timbrado";
 export const PRE_INVOICED = "PreFactura";
 
 // Invoicing default receptors info
-export const GENERIC_RECEPTOR_ID = "43";
+export const GENERIC_RECEPTOR_ID = 43;
 export const GENERIC_RECEPTOR_RFC = "XAXX010101000";
 export const GENERIC_RECEPTOR_NAME = "Generico";
 
-export const MARRIOTT_RECEPTOR_ID = "132939";
+export const MARRIOTT_RECEPTOR_ID = 132939;
 export const MARRIOTT_RECEPTOR_RFC = "XEXX010101000";
 export const MARRIOTT_RECEPTOR_NAME = "MARRIOTT SWITZERLAND LICENSING COMPANY";
 

@@ -1852,7 +1852,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/07/07")
+    .replace("{appDateField}", "2024/07/20")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();
@@ -2339,7 +2339,7 @@ export async function toggleLedgerStatus(
   };
 }
 
-export async function addNewLegder(reservationId: string): Promise<void> {
+export async function addNewLegder(reservationId: string): Promise<string> {
   if (!FRONT_API_RSRV_ADD_NEW_LEDGER) {
     throw new Error("FRONT_API_RSRV_ADD_NEW_LEDGER endpoint cannot be empty");
   }
