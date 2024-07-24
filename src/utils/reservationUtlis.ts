@@ -1179,15 +1179,19 @@ export async function classifyLedgers(
     }
   });
 
-  const invoicable = ledgers.filter(
-    (ledger) =>
-      ledger.transactions.length > 0 &&
-      ledger.transactions.find(
-        (transaction) => transaction.type === "CHARGE"
-      ) &&
-      ledger.balance === 0 &&
-      !ledger.invoice
-  );
+  const invoicable = ledgers.filter((ledger) => {
+    const hasCharges = ledger.transactions.find(
+      (transaction) => transaction.type === "CHARGE"
+    );
+
+    const hasPayments = ledger.transactions.find(
+      (transaction) => transaction.type === "PAYMENT"
+    );
+
+    if (hasCharges && hasPayments && ledger.balance === 0 && !ledger.invoice) {
+      return ledger;
+    }
+  });
 
   const active = ledgers.filter(
     (ledgers) =>
