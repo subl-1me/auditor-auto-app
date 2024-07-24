@@ -23,4 +23,16 @@ describe("Invoicer tests suit", async function () {
     // const rfcInfo = await invoicer.recoverRFCInfo("783754");
     // console.log();
   });
+
+  it("Should send a invoice to an given email", async function () {
+    // const reservationId = "21822122";
+    // const invoiceId = "17897344";
+    // const sendEmailResponse = await invoicer.sendInvoiceByEmail(
+    //   invoiceId,
+    //   reservationId,
+    //   "julio.ugalde404@gmail.com"
+    // );
+    // // julio.ugalde404@gmail.com
+    // console.log(sendEmailResponse);
+  });
 });

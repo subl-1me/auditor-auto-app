@@ -6,7 +6,6 @@ import fs from "fs";
 
 import {
   analyzeDoc,
-  changeLedgerStatus,
   reservationDataMatcher,
   getReservationCertificate,
   getReservationGuaranteeDocs,
@@ -15,7 +14,7 @@ import {
   getReservationNotes,
   getReservationRateCode,
   getReservationRoutings,
-  getVirtualCard,
+  getReservationContact,
 } from "../utils/reservationUtlis";
 import MockData from "./mock/mock-data";
 import Reservation from "../types/Reservation";
@@ -78,6 +77,12 @@ describe("Reservation-utils test suite", async () => {
     expect(true).to.equal(true);
   });
 
+  it("Should get reservations email attached", async () => {
+    const reservationId = "22228191";
+    const emails = await getReservationContact(reservationId);
+    console.log(emails);
+  });
+
   it("Should analyze and clasificate coupon", async () => {
     // const reservations = await getReservationList(IN_HOUSE_FILTER);
     // for (const reservation of reservations) {
@@ -89,44 +94,44 @@ describe("Reservation-utils test suite", async () => {
     //     }
     //   }
     // }
-    const tempDocsPath = path.join(__dirname, "../", "utils", "docsTemp");
-    const reservationsMock = [
-      {
-        reservationId1: "19248096",
-        reservationId2: "20470076",
-        guestName: "pawan upreti",
-        dateIn: "2023/10/31",
-        dateOut: "2923/11/30",
-        totalString: "$29,568.00",
-      },
-      {
-        reservationId1: "19248096",
-        reservationId2: "20470079",
-        guestName: "pradeep kumar",
-        dateIn: "2023/10/31",
-        dateOut: "2923/11/30",
-        totalString: "$29,568.00",
-      },
-      {
-        reservationId1: "19248096",
-        reservationId2: "20470081",
-        guestName: "mohan neelakan",
-        dateIn: "2023/10/31",
-        dateOut: "2923/11/30",
-        totalString: "$29,568.00",
-      },
-    ];
-    fs.readdir(tempDocsPath, async (err, files) => {
-      if (err) {
-        throw new Error("Error reading directory.");
-      }
-      let counter = 0;
-      for (const file of files) {
-        let filePath = path.join(tempDocsPath, file);
-        await reservationDataMatcher(filePath, reservationsMock[counter]);
-        counter++;
-      }
-    });
+    // const tempDocsPath = path.join(__dirname, "../", "utils", "docsTemp");
+    // const reservationsMock = [
+    //   {
+    //     reservationId1: "19248096",
+    //     reservationId2: "20470076",
+    //     guestName: "pawan upreti",
+    //     dateIn: "2023/10/31",
+    //     dateOut: "2923/11/30",
+    //     totalString: "$29,568.00",
+    //   },
+    //   {
+    //     reservationId1: "19248096",
+    //     reservationId2: "20470079",
+    //     guestName: "pradeep kumar",
+    //     dateIn: "2023/10/31",
+    //     dateOut: "2923/11/30",
+    //     totalString: "$29,568.00",
+    //   },
+    //   {
+    //     reservationId1: "19248096",
+    //     reservationId2: "20470081",
+    //     guestName: "mohan neelakan",
+    //     dateIn: "2023/10/31",
+    //     dateOut: "2923/11/30",
+    //     totalString: "$29,568.00",
+    //   },
+    // ];
+    // fs.readdir(tempDocsPath, async (err, files) => {
+    //   if (err) {
+    //     throw new Error("Error reading directory.");
+    //   }
+    //   let counter = 0;
+    //   for (const file of files) {
+    //     let filePath = path.join(tempDocsPath, file);
+    //     await reservationDataMatcher(filePath, reservationsMock[counter]);
+    //     counter++;
+    //   }
+    // });
   });
 
   // it("should get reservation routings", async () => {

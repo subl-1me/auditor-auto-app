@@ -54,12 +54,10 @@ export default class OperationManager {
         const pitChecker = new PITChecker();
         operationResponse = await pitChecker.performChecker();
         break;
-
       case "Check all virtual cards":
         const checkVirtualCards = new CheckVirtualCards();
         await checkVirtualCards.init();
         break;
-
       case "Create routing":
         const utilsRes = await utils.performUtil(operation);
         break;

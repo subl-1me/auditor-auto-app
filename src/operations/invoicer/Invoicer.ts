@@ -38,6 +38,7 @@ import {
   addNewLegder,
   classifyLedgers,
   toggleLedgerStatus,
+  getReservationContact,
 } from "../../utils/reservationUtlis";
 
 import Ledger from "../../types/Ledger";
@@ -340,7 +341,6 @@ export default class Invoicer {
 
           // invoicingResponse.invoice = createInvoiceResponse.invoice;
 
-          this.regroupInvoice(createInvoiceResponse);
           break;
         case "Generic":
           const genericReceptor = await handleReceptorValidator(
@@ -362,7 +362,6 @@ export default class Invoicer {
             ledgerTarget,
             genericReceptor.receptorInfo
           );
-          this.regroupInvoice(createInvoiceResponse);
           break;
         case "Input custom RFC":
           let receptorInfo;
@@ -393,7 +392,6 @@ export default class Invoicer {
             ledgerTarget,
             receptorInfo
           );
-          this.regroupInvoice(createInvoiceResponse);
           break;
         case "Skip":
           await this.tempStorage.writePendingReservations(departure.id);
@@ -402,6 +400,13 @@ export default class Invoicer {
           break;
       }
 
+      if (createInvoiceResponse && createInvoiceResponse.invoice) {
+        const invoice = createInvoiceResponse.invoice;
+
+        this.regroupInvoice(createInvoiceResponse);
+        await this.printInvoiceDoc(createInvoiceResponse);
+        await this.handleSendingInvoice(invoice, departure);
+      }
       return invoicingResponse;
     } catch (err) {
       console.log(err);
@@ -410,6 +415,54 @@ export default class Invoicer {
         err,
       };
     }
+  }
+
+  async handleSendingInvoice(
+    invoice: Invoice,
+    reservation: Reservation
+  ): Promise<void> {
+    // Get emails from reservations's contact form
+    const reservationEmails = await getReservationContact(reservation.id);
+    const { guestEmail, corpEmail } = reservationEmails;
+
+    // send to guest email
+    if (
+      guestEmail &&
+      guestEmail !== "" &&
+      !guestEmail.includes("FRONT2GO") &&
+      !guestEmail.includes("GENERICPROFILE")
+    ) {
+      console.log(`Sending invoice to: ${guestEmail}`);
+      const sendToGuestRes = await this.sendInvoiceByEmail(
+        invoice?.receiptId || "",
+        reservation.id,
+        guestEmail
+      );
+      console.log(sendToGuestRes);
+    }
+
+    if (corpEmail && corpEmail !== "") {
+      console.log(`Sending invoice to: ${corpEmail}`);
+      const sendToCorpRes = await this.sendInvoiceByEmail(
+        invoice?.receiptId || "",
+        reservation.id,
+        corpEmail
+      );
+      console.log(sendToCorpRes);
+    }
+
+    const email = await this.askForEmail();
+    if (email && email !== "") {
+      console.log(`Sending invoice to: ${corpEmail}`);
+      const sendEmailResponse = await this.sendInvoiceByEmail(
+        invoice.receiptId || "",
+        reservation.id,
+        email
+      );
+      console.log(sendEmailResponse);
+    }
+
+    return;
   }
 
   async confirmFiscalData(fiscalData: any): Promise<boolean> {
@@ -878,16 +931,10 @@ export default class Invoicer {
     console.log(`Invoice was created successfully. ${fiscalData.receptorRfc}`);
     invoice.status = INVOICED;
     invoicerResponse.invoice = invoice;
-
-    await this.printInvoiceDoc(invoicerResponse);
-    console.log(invoicerResponse);
     return invoicerResponse;
   }
 
-  private async sendInvoiceByEmail(
-    invoiceId: string,
-    reservationId: string
-  ): Promise<any> {
+  private async askForEmail(): Promise<string | null> {
     const emailInputPrompt = [
       {
         type: "input",
@@ -895,15 +942,23 @@ export default class Invoicer {
         message: "Type guest email:",
       },
     ];
-
     const answer = await inquirer.prompt(emailInputPrompt);
     const email = answer.email;
 
+    return email || null;
+  }
+
+  async sendInvoiceByEmail(
+    invoiceId: string,
+    reservationId: string,
+    emailTarget: string
+  ): Promise<any> {
     const formData = new FormData();
     formData.append("nComprobante", invoiceId);
     formData.append("GuestCode", reservationId);
     formData.append("Historico", "false");
-    formData.append("correo", email);
+    formData.append("EmailIdiom", "1");
+    formData.append("correo", emailTarget);
 
     const authTokens = await TokenStorage.getData();
     const sendInvoiceResponse = await this.frontService.postRequest(
@@ -913,13 +968,12 @@ export default class Invoicer {
     );
 
     const { success, error } = sendInvoiceResponse.data;
-    console.log(sendInvoiceResponse);
     if (!success) {
       console.log("Error trying to send invoice by email: " + error);
       return sendInvoiceResponse.data;
     }
 
-    return sendInvoiceResponse;
+    return sendInvoiceResponse.data;
   }
 
   private async getSuggestedLedger(reservation: Reservation): Promise<any> {

@@ -92,7 +92,6 @@ export default class Scrapper {
     if (!bearerResult) {
       throw new Error("Invalid bearer token generation.");
     }
-
     return bearerResult[1];
   }
 
@@ -113,7 +112,6 @@ export default class Scrapper {
         return reportPath;
       }
     }
-
     return null;
   }
 
@@ -147,14 +145,25 @@ export default class Scrapper {
     return { guestEmail, corpEmail };
   }
 
+  extractReservationEmailCorp(): string | null {
+    const CorpEmailFieldPattern = /<input[^>]*id="txtMail"[^>]*>/;
+
+    const corpEmailFieldElem = this.htmlBody.match(CorpEmailFieldPattern);
+    if (!corpEmailFieldElem) {
+      return null;
+    }
+
+    const ValuePattern = /value="([^"]*)"/;
+    const emailValue = corpEmailFieldElem[0].match(ValuePattern);
+    return emailValue ? emailValue[1] : null;
+  }
+
   extractReservationEmailContact(): string | null {
-    const GuestEmailFieldPattern = new RegExp(
-      `<input class="form-control CajaText txtNRequired" id="txtPers_mail" name="txtPers_mail" placeholer="(.*)" type="text" value="(.*)" readonly="readOnly" />`
-      // `<input class="(.*)" id="(.*)" name="(.*)" placeholer="(.*)" type="(.*)" value="(.*)" readonly="(.*)">`
-    );
-    `<input class="form-control CajaText txtNRequired" id="txtPers_mail" name="txtPers_mail" placeholer="@F2goPMS.Recursos.Traducciones.mail" type="text" value="HDSJSN@GDJ.COM" readonly="readOnly">`;
-    // `<input class="form-control CajaText txtRequired" id="txtPers_mail" name="txtPers_mail" placeholer="@F2goPMS.Recursos.Traducciones.mail" type="text" value="HDSJSN@GDJ.COM" />`;
-    const guestEmailFieldElem = this.htmlBody.match(GuestEmailFieldPattern);
+    // const GuestEmailFieldPattern = new RegExp(
+    //   `<input(.*)id="txtPers_mail"(.*)>`
+    // );
+    const guestEmailFieldPattern = /<input[^>]*id="txtPers_mail"[^>]*>/;
+    const guestEmailFieldElem = this.htmlBody.match(guestEmailFieldPattern);
     // console.log(guestEmailFieldElem);
     if (!guestEmailFieldElem) {
       return null;
@@ -220,20 +229,5 @@ export default class Scrapper {
     });
 
     return docs;
-  }
-
-  extractReservationEmailCorp(): string | null {
-    const CorpEmailFieldPattern = new RegExp(
-      `<input class="form-control CajaText" id="txtMail" name="txtMail" placeholer="(.*)" type="text" value="(.*)">`
-    );
-
-    const corpEmailFieldElem = this.htmlBody.match(CorpEmailFieldPattern);
-    if (!corpEmailFieldElem) {
-      return null;
-    }
-
-    const ValuePattern = /value="([^"]*)"/;
-    const emailValue = corpEmailFieldElem[0].match(ValuePattern);
-    return emailValue ? emailValue[1] : null;
   }
 }
