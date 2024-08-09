@@ -1193,6 +1193,11 @@ export async function classifyLedgers(
     }
   });
 
+  // invoicable.forEach((ledger) => {
+  //   console.log(ledger);
+  //   console.log(ledger.transactions);
+  // });
+
   const active = ledgers.filter(
     (ledgers) =>
       ledgers.status === "OPEN" &&
@@ -1856,7 +1861,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/07/24")
+    .replace("{appDateField}", "2024/08/08")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

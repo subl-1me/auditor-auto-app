@@ -251,7 +251,97 @@ export default class Invoicer {
 
   private async performAssistedInvoicing(
     departures: Reservation[]
-  ): Promise<any> {}
+  ): Promise<any> {
+    const invoicingPreview = await this.showInvoicingPreview(departures);
+    console.log("\n--------------------");
+    console.log("Automatic Invoicing preview:");
+    console.log("--------------------\n");
+    console.log(invoicingPreview);
+    console.log("--------------------\n");
+
+    const skipped = await this.askForSkipped();
+    departures = departures.filter(
+      (departure) => !skipped.includes(departure.room)
+    );
+
+    const notGenericDepartures = invoicingPreview.filter(
+      (preview: any) =>
+        preview.RFC !== GENERIC_RECEPTOR_RFC && preview.RFC !== ""
+    );
+    const genericDepartures = invoicingPreview.filter(
+      (preview: any) => preview.RFC === GENERIC_RECEPTOR_RFC
+    );
+    const unkownDepartures = invoicingPreview.filter(
+      (preview: any) => preview.RFC === ""
+    );
+
+    const invoicingPromises: any = [];
+    for (const departure of departures) {
+      const isUnkown = unkownDepartures.find(
+        (data: any) => data.room === departure.room
+      );
+      if (isUnkown) {
+        // pending
+        continue;
+      }
+
+      const fiscalData = notGenericDepartures.find(
+        (data: any) => data.room === departure.room
+      );
+      const isGeneric = genericDepartures.find(
+        (data: any) => data.room === departure.room
+      );
+
+      if (fiscalData) {
+        console.log(
+          `Invoicing ${departure.guestName} - ${departure.room} - ${fiscalData.RFC} - On ledger ${fiscalData.suggestedLedgers[0]}`
+        );
+        invoicingPromises.push(
+          await this.handleInvoicingType(
+            "System Suggestion",
+            departure,
+            fiscalData,
+            fiscalData.suggestedLedgers[0]
+          )
+        );
+        continue;
+      }
+
+      console.log(
+        `Invoicing ${departure.guestName} - ${departure.room} - ${fiscalData.RFC} - On ledger ${fiscalData.suggestedLedgers[0]}`
+      );
+      invoicingPromises.push(
+        await this.handleInvoicingType(
+          "System Suggestion",
+          departure,
+          fiscalData,
+          fiscalData.suggestedLedgers[0]
+        )
+      );
+    }
+
+    const invoices = await Promise.all(invoicingPromises);
+  }
+
+  private async askForSkipped(): Promise<Number[]> {
+    const skipPromptQuestion = [
+      {
+        type: "input",
+        message: "Type rooms to skip",
+        name: "roomsToSkip",
+      },
+    ];
+
+    const skipPrompt = await inquirer.prompt(skipPromptQuestion);
+    let skipList: Number[] = [];
+    if (skipPrompt.roomsToSkip) {
+      skipList = skipPrompt.roomsToSkip
+        .split(" ")
+        .map((room: string) => Number(room));
+    }
+
+    return skipList;
+  }
 
   private regroupInvoice(createInvoiceResponse: InvoiceResponse): void {
     const { invoice, error } = createInvoiceResponse;
@@ -271,6 +361,7 @@ export default class Invoicer {
     ledgerTarget: Number
   ): Promise<any> {
     let invoicingResponse: InvoicingTypeResponse = {
+      reservationId: departure.id,
       invoiceType,
       hasError: false,
       errors: [],
@@ -417,6 +508,7 @@ export default class Invoicer {
     }
   }
 
+  // TODO: Add skip when generic
   async handleSendingInvoice(
     invoice: Invoice,
     reservation: Reservation
@@ -453,7 +545,7 @@ export default class Invoicer {
 
     const email = await this.askForEmail();
     if (email && email !== "") {
-      console.log(`Sending invoice to: ${corpEmail}`);
+      console.log(`Sending invoice to: ${email}`);
       const sendEmailResponse = await this.sendInvoiceByEmail(
         invoice.receiptId || "",
         reservation.id,
@@ -491,33 +583,26 @@ export default class Invoicer {
     departures: Reservation[]
   ): Promise<any> {
     const invoicingPreview = await this.showInvoicingPreview(departures);
-    const skipPromptQuestion = [
-      {
-        type: "input",
-        message: "Type rooms to skip",
-        name: "roomsToSkip",
-      },
-    ];
-
-    console.log("\nInvoicing preview:");
-    console.log("---------------");
+    console.log("--------------------");
+    console.log("\nManual Invoicing preview:");
+    console.log("--------------------");
     console.log(invoicingPreview);
-    console.log("---------------\n");
+    console.log("--------------------\n");
 
-    const skipPrompt = await inquirer.prompt(skipPromptQuestion);
-    let skipList: Number[] = [];
-    if (skipPrompt.roomsToSkip) {
-      skipList = skipPrompt.roomsToSkip
-        .split(" ")
-        .map((room: string) => Number(room));
-    }
-
-    const notGenericDepartures = invoicingPreview.filter(
-      (preview: any) => !skipList.includes(preview.room)
+    const skipped = await this.askForSkipped();
+    departures = departures.filter(
+      (departure) => !skipped.includes(departure.room)
     );
 
-    const genericDepartures = invoicingPreview.filter((preview: any) =>
-      skipList.includes(preview.room)
+    const notGenericDepartures = invoicingPreview.filter(
+      (preview: any) =>
+        preview.RFC !== GENERIC_RECEPTOR_RFC && preview.RFC !== ""
+    );
+    const genericDepartures = invoicingPreview.filter(
+      (preview: any) => preview.RFC === GENERIC_RECEPTOR_RFC
+    );
+    const unkownDepartures = invoicingPreview.filter(
+      (preview: any) => preview.RFC === ""
     );
 
     for (const departure of departures) {
@@ -538,7 +623,7 @@ export default class Invoicer {
       if (fiscalData) {
         console.log(`RFC: ${fiscalData.RFC}`);
         console.log(`Company: ${fiscalData.companyName}`);
-        console.log("-----------------------------");
+        console.log("------------------------@-----");
       } else {
         fiscalData = await this.initSystemInvoiceSuggest(departure);
       }

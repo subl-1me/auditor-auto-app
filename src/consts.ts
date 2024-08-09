@@ -76,9 +76,9 @@ export const HOME_MENU_OPERATION_NAMES = [
   "Print docs",
   "Check reservation",
   "Check PIT",
-  "Check all virtual cards",
+  // "Check all virtual cards",
   "Utils",
-  "Settings",
+  // "Settings",
   " Exit ",
 ];
 

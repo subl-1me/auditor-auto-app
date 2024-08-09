@@ -3,11 +3,9 @@ import TokenStorage from "../utils/TokenStorage";
 
 // operations
 import Logger from "./logger/Logger";
-import Noktos from "./noktosProcess/Noktos";
 import Invoicer from "./invoicer/Invoicer";
 import Printer from "./printer/Printer";
 import PITChecker from "./pit-checker/PitChecker";
-import CheckVirtualCards from "./check-virtual-cards/CheckVirtualCards";
 import Utils from "./utils/Utils";
 import PaymentApplier from "./prePaidApplier/prePaidApplier";
 import CheckReservation from "./check-reservation/CheckReservation";
@@ -29,10 +27,10 @@ export default class OperationManager {
         // if sucess save in local
         await TokenStorage.write(JSON.stringify(loggerResponse.tokens));
         break;
-      case "Start Noktos process":
-        const noktos = new Noktos();
-        await noktos.performProcess(menuStack);
-        break;
+      // case "Start Noktos process":
+      //   const noktos = new Noktos();
+      //   await noktos.performProcess(menuStack);
+      //   break;
       case "Invoicer":
         const invoicer = new Invoicer();
         operationResponse = await invoicer.performInvoicer(menuStack);
@@ -54,10 +52,10 @@ export default class OperationManager {
         const pitChecker = new PITChecker();
         operationResponse = await pitChecker.performChecker();
         break;
-      case "Check all virtual cards":
-        const checkVirtualCards = new CheckVirtualCards();
-        await checkVirtualCards.init();
-        break;
+      // case "Check all virtual cards":
+      //   const checkVirtualCards = new CheckVirtualCards();
+      //   await checkVirtualCards.init();
+      //   break;
       case "Create routing":
         const utilsRes = await utils.performUtil(operation);
         break;

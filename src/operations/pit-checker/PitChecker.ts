@@ -643,7 +643,7 @@ export default class PITChecker {
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/07/24";
+    const todayDate = "2024/08/08";
 
     if (balance >= 0) {
       // console.log("Payment status: required");
@@ -698,6 +698,8 @@ export default class PITChecker {
       // otherwise there are differences in payments
       // console.log(`There's a diff in rates.`);
       // console.log("\n");
+
+      //TODO: Add a message that contains remaining balance that cannot pay the next night rate
       const diff = Number(
         parseFloat((total - paymentsSum).toString()).toFixed(2)
       );
