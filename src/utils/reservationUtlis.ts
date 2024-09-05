@@ -1378,6 +1378,7 @@ export async function getReservationByFilter(filter: string): Promise<any> {
   reservation.totalToPay = rates.total || 0;
   return reservation;
 }
+
 /**
  * @description Gets reservation list by following a status filter.
  * @param {string} status Condition to fetch list of reservation. See consts file to see usable filters.
@@ -1840,6 +1841,56 @@ export async function GetReservationRateDescription(
   return rateDescription;
 }
 
+export async function getTodayArrives(): Promise<any> {
+  const listOptions = {
+    pc: "KFwHWn911eaVeJhL++adWg==",
+    ph: false,
+    pn: "",
+    ci: "",
+    gpi: "",
+    ti: "",
+    rc: "",
+    rm: "",
+    fm: "",
+    to: "",
+    fq: "",
+    rs: "RSRV",
+    st: "LD",
+    grp: "",
+    gs: "",
+    sidx: "NameGuest",
+    sord: "asc",
+    rows: 120,
+    page: 1,
+    ss: false,
+    rcss: "",
+    user: "HTJUGALDEA",
+    AddGuest: false,
+  };
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.postRequest(
+    listOptions,
+    FRONT_API_RSRV_LIST || "",
+    authTokens
+  );
+
+  // sort by room
+  const items = response.data.rows;
+  let arrives;
+
+  arrives = items.map((arrive: any) => {
+    return {
+      reservationId: arrive.rsrvCode,
+      assignedRoom: 0,
+      guestName: arrive.nameGuest,
+      status: arrive.statusRsv,
+    };
+  });
+
+  return arrives;
+}
+
 export async function getReservationRates(
   reservationId: string
 ): Promise<RateDetails | any> {
@@ -1861,7 +1912,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/08/08")
+    .replace("{appDateField}", "2024/09/04")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

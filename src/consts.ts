@@ -21,6 +21,77 @@ export const GENERIC_RECEPTOR_ID = 43;
 export const GENERIC_RECEPTOR_RFC = "XAXX010101000";
 export const GENERIC_RECEPTOR_NAME = "Generico";
 
+export const GENERIC_RECEPTOR = {
+  receptorId: 43,
+  receptorRfc: "XAXX010101000",
+  receptorNombre: "Generico",
+  receptorRegimen: "616",
+  receptorCalle: "",
+  receptorNoexterior: "",
+  receptorNointerior: "",
+  receptorColonia: "",
+  receptorLocalidad: "",
+  receptorReferencia: "",
+  receptorMunicipio: "",
+  receptorEstado: "",
+  receptorPais: "MEXICO",
+  receptorCpostal: "01000",
+  receptorEstatus: "4",
+  receptorNoCuenta: "",
+  receptorMetododepago: "",
+  countryName: "MEXICO",
+  stateName: "",
+  tipoProceso: "",
+  tipoComite: "",
+  ambito: "",
+  claveEntidad: "",
+  idContabilidad: "000000",
+  ineVersion: "          ",
+  receptorPp: false,
+  receptorUsoCfdi: "S01",
+  receptorEmail: "",
+  numRegIdTrib: null,
+  receptorArcode: "LCCXAX0903",
+};
+
+export const MARRIOTT_RECEPTOR = {
+  receptorId: 132939,
+  receptorRfc: "XEXX010101000",
+  receptorNombre: "MARRIOTT SWITZERLAND LICENSING COMPANY S AR L",
+  receptorRegimen: "616",
+  receptorCalle: ".",
+  receptorNoexterior: ".",
+  receptorNointerior: ".",
+  receptorColonia: null,
+  receptorLocalidad: null,
+  receptorReferencia: null,
+  receptorMunicipio: null,
+  receptorEstado: null,
+  receptorPais: "SUIZA",
+  receptorCpostal: "00000",
+  receptorEstatus: "4",
+  receptorNoCuenta: "",
+  receptorMetododepago: "",
+  countryName: "SUIZA",
+  stateName: null,
+  tipoProceso: "",
+  tipoComite: "",
+  ambito: "",
+  claveEntidad: "",
+  idContabilidad: "",
+  ineVersion: "          ",
+  receptorPp: false,
+  receptorUsoCfdi: "S01",
+  receptorEmail: "",
+  numRegIdTrib: "XEXX010101000",
+  receptorArcode: "LCCXEX2911",
+};
+
+export const CFDI_USES = {
+  NO_FISCAL_USE: "S01 - SIN USOS FISCALES",
+  GENERAL_USE: "603 - GASTOS EN GENERAL",
+};
+
 export const MARRIOTT_RECEPTOR_ID = 132939;
 export const MARRIOTT_RECEPTOR_RFC = "XEXX010101000";
 export const MARRIOTT_RECEPTOR_NAME = "MARRIOTT SWITZERLAND LICENSING COMPANY";
@@ -76,6 +147,7 @@ export const HOME_MENU_OPERATION_NAMES = [
   "Print docs",
   "Check reservation",
   "Check PIT",
+  "Cancel reservation manually",
   // "Check all virtual cards",
   "Utils",
   // "Settings",

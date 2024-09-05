@@ -18,6 +18,7 @@ import {
   COUPON,
   DEPARTURES_FILTER,
   GENERAL_USE,
+  GENERIC_RECEPTOR,
   GENERIC_RECEPTOR_ID,
   GENERIC_RECEPTOR_NAME,
   GENERIC_RECEPTOR_RFC,
@@ -434,24 +435,23 @@ export default class Invoicer {
 
           break;
         case "Generic":
-          const genericReceptor = await handleReceptorValidator(
-            GENERIC_RECEPTOR_RFC
-          );
-          if (genericReceptor.error) {
-            console.log(
-              `Error trying to validate RFC receptor (${GENERIC_RECEPTOR_RFC}).`
-            );
-            break;
-          }
-
-          if (!(await this.confirmFiscalData(genericReceptor.receptorInfo))) {
+          // const genericReceptor = await handleReceptorValidator(
+          //   GENERIC_RECEPTOR_RFC
+          // );
+          // if (genericReceptor.error) {
+          //   console.log(
+          //     `Error trying to validate RFC receptor (${GENERIC_RECEPTOR_RFC}).`
+          //   );
+          //   break;
+          // }
+          if (!(await this.confirmFiscalData(GENERIC_RECEPTOR))) {
             break;
           }
 
           createInvoiceResponse = await this.createInvoice(
             departure,
             ledgerTarget,
-            genericReceptor.receptorInfo
+            GENERIC_RECEPTOR
           );
           break;
         case "Input custom RFC":
@@ -496,7 +496,9 @@ export default class Invoicer {
 
         this.regroupInvoice(createInvoiceResponse);
         await this.printInvoiceDoc(createInvoiceResponse);
-        await this.handleSendingInvoice(invoice, departure);
+        if (invoice.RFC !== GENERIC_RECEPTOR_RFC) {
+          await this.handleSendingInvoice(invoice, departure);
+        }
       }
       return invoicingResponse;
     } catch (err) {
@@ -630,10 +632,7 @@ export default class Invoicer {
 
       if (isGeneric) {
         console.log("Generic");
-        fiscalData = {
-          RFC: GENERIC_RECEPTOR_RFC,
-          companyName: GENERIC_RECEPTOR_NAME,
-        };
+        fiscalData = GENERIC_RECEPTOR;
         console.log("----------------------------");
       }
 
@@ -644,7 +643,7 @@ export default class Invoicer {
         ledgerTarget = await this.askForLedger(departure.ledgerClassification);
       }
 
-      if (fiscalData && fiscalData.receptorRfc) {
+      if (fiscalData) {
         if (await this.confirmFiscalData(fiscalData)) {
           const suggestInvoicingResponse = await this.createInvoice(
             departure,
