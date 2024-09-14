@@ -13,16 +13,17 @@ import Reservation from "../types/Reservation";
 import Transaction from "../types/Transaction";
 import GuaranteeDoc from "../types/GuaranteeDoc";
 import { RateDetails, Rate } from "../types/RateDetails";
+import ReservationLog from "../types/ReservationLog";
 
 import {
   DEPARTURES_FILTER,
   IN_HOUSE_FILTER,
   PRE_INVOICED,
   INVOICED,
-  VIRTUAL_CARD_PROVIDERS,
   BANNED_COUPON_CONTENTS,
   EXPEDIA,
   BOOKING,
+  DB_NAME,
 } from "../consts";
 
 import {
@@ -30,11 +31,11 @@ import {
   invoiceReceptorRFCPattern,
   invoiceReceptorNamePattern,
   VCCPatternsList,
+  tableDataPattern,
 } from "../patterns";
 import path from "path";
 import VCC from "../types/VCC";
 import { TempStorage } from "./TempStorage";
-import ReservationChecked from "../types/ReservationChecked";
 
 const frontService = new FrontService();
 const {
@@ -62,7 +63,77 @@ const {
   FRONT_API_GET_ECOMMERCE_INFO,
   FRONT_API_CREATE_PAYMENT,
   FRONT_API_RSRV_HOME,
+  FRONT_API_RESERVATION_LOGS,
 } = process.env;
+
+export async function getReservationLogs(reservationId: string): Promise<any> {
+  if (!reservationId || reservationId === "") {
+    console.log("Reservation ID is required.");
+    return;
+  }
+
+  const _FRONT_API_RESERVATION_LOGS = FRONT_API_RESERVATION_LOGS?.replace(
+    "{reservationId}",
+    reservationId
+  ).replace("{dbName}", DB_NAME);
+
+  const authTokens = await TokenStorage.getData();
+  const response = await frontService.getRequest(
+    _FRONT_API_RESERVATION_LOGS,
+    authTokens
+  );
+
+  if (response === "") {
+    console.log("No response data was recieved on log response.");
+    return;
+  }
+
+  const scrapper = new Scrapper(response);
+  const logs = await scrapper.extractReservationLogs();
+  const logsCategorization = await categorizeReservationLogs(logs);
+  return logs;
+}
+
+async function categorizeReservationLogs(logs: any): Promise<ReservationLog[]> {
+  let reservationLogs: ReservationLog[] = [];
+
+  logs.forEach((row: any) => {
+    const tableHeadNameMatch = row.match(/<th>(.*)<\/th>/);
+    const tableDataMatch = row.match(/<td(.*?)>(.*)<\/td>/g);
+
+    const tableHeadName = tableHeadNameMatch ? tableHeadNameMatch[1] : "";
+    if (tableHeadName === "rate" || tableHeadName === "Rate") {
+      let oldValueMatchContent = tableDataMatch
+        ? tableDataMatch[0].match(tableDataPattern)
+        : "";
+      let newValueMatchContent = tableDataMatch
+        ? tableDataMatch[1].match(tableDataPattern)
+        : "";
+      let newValueContent = newValueMatchContent[2] || "";
+      let oldValueContent = oldValueMatchContent[2] || "";
+
+      reservationLogs.push({
+        field: tableHeadName || "",
+        oldValue: oldValueContent,
+        newValue: newValueContent,
+        changeDate: tableDataMatch ? tableDataMatch[3] : "",
+      });
+    }
+  });
+
+  console.log(reservationLogs);
+  return reservationLogs;
+}
+
+/**
+ * This method helps tu search unwhised rate changes applied by system
+ * @param reservationLogs
+ */
+export async function searchForRateChanges(
+  reservationId: string
+): Promise<any> {
+  const logs = await getReservationLogs(reservationId);
+}
 
 export async function getReservationCertificate(
   reservationId: string
@@ -1912,7 +1983,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/09/04")
+    .replace("{appDateField}", "2024/09/14")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

@@ -200,6 +200,24 @@ export default class Scrapper {
     return spanDesc;
   }
 
+  extractReservationLogs(): any {
+    const logsTableRegExp = /<tbody>([\s\S\t.]*?)<\/tbody>/;
+    const table = this.htmlBody.match(logsTableRegExp);
+    if (!table) {
+      console.log("No log matches.");
+      return [];
+    }
+
+    const tableRowRegExp = /<tr>([\s\S\t/]*?)<\/tr>/g;
+    const tableRows = table[0].match(tableRowRegExp);
+    if (!tableRows || tableRows.length === 0) {
+      console.log("No table rows found.");
+      return [];
+    }
+
+    return tableRows;
+  }
+
   extractGuaranteeDocs(): any[] {
     const validItems = [
       "Cupón agencia de viajes",

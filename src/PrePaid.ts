@@ -51,7 +51,7 @@ export default class PrePaid {
         prePaidType = CERTIFICATE;
         return {
           type: prePaidType,
-          data,
+          data: { code: data },
         };
       }
 
@@ -268,11 +268,8 @@ export default class PrePaid {
           prePaidMethod.data,
           activeLedger
         );
-
-        console.log(pymntApplierRes.data);
         break;
       case COUPON:
-        console.log(prePaidMethod.data);
         pymntApplierRes = await addNewPayment({
           type: "CPC",
           amount: activeLedger?.balance || 0,

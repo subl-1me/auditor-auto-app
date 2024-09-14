@@ -9,7 +9,6 @@ import PITChecker from "./pit-checker/PitChecker";
 import Utils from "./utils/Utils";
 import PaymentApplier from "./prePaidApplier/prePaidApplier";
 import CheckReservation from "./check-reservation/CheckReservation";
-import CancelReservationManually from "./cancel-reservation-manually/CancelReservationManually";
 
 export default class OperationManager {
   constructor() {}
@@ -53,15 +52,6 @@ export default class OperationManager {
         const pitChecker = new PITChecker();
         operationResponse = await pitChecker.performChecker();
         break;
-
-      case "Cancel reservation manually":
-        const cancellator = new CancelReservationManually();
-        const cancellationResponse = await cancellator.performCancellation();
-        break;
-      // case "Check all virtual cards":
-      //   const checkVirtualCards = new CheckVirtualCards();
-      //   await checkVirtualCards.init();
-      //   break;
       case "Create routing":
         const utilsRes = await utils.performUtil(operation);
         break;

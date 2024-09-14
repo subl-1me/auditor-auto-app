@@ -13,9 +13,8 @@ import {
   getReservationRoutings,
   getReservationById,
   checkAllRates,
-  classifyLedgers,
-  analyzeLedgers,
   getReservationInvoiceList,
+  getReservationLogs,
 } from "../../utils/reservationUtlis";
 import {
   CERTIFICATE,
@@ -25,6 +24,7 @@ import {
   ERROR,
   FULLY_PAID,
   IN_HOUSE_FILTER,
+  MARRIOTT_RECEPTOR,
   PARTIAL_PAID,
   PENDING,
   PRE_PAID,
@@ -452,6 +452,11 @@ export default class PITChecker {
       checkDate: new Date(),
     };
 
+    // if (rateChangeLogs.length > 0) {
+    // console.log("Rate changes:");
+    // console.log(rateChangeLogs);
+    // }
+
     // console.log(rateChecker);
     reservation.ledgers = await getReservationLedgerList(
       reservation.id,
@@ -496,6 +501,8 @@ export default class PITChecker {
       // if (ledgerClassification.active.length > 0) {
       //   ledgerClassification.active[0].isPrincipal = true;
       // }
+      console.log("Searching for rate changes...");
+      const rateChangeLogs = await getReservationLogs(reservation.id);
       result.paymentStatus = PRE_PAID;
       result.prePaidMethod = prePaidMethod;
       if (result.prePaidMethod.type === UNKNOWN) {
@@ -507,8 +514,8 @@ export default class PITChecker {
         result.hasErrors = true;
         result.errorDetail.type = "UNKOWN DOC";
         result.errorDetail.detail = "Document is not supported.";
-        await tempStorage.writeChecked(result); // save on local
-        return result;
+        // await tempStorage.writeChecked(result); // save on local
+        // return result;
       }
 
       // console.log(`This is a prepaid reservation by ${prePaidMethod.type}...`);
@@ -520,8 +527,8 @@ export default class PITChecker {
           result.hasErrors = true;
           result.errorDetail.type = reservationRates.type;
           result.errorDetail.detail = reservationRates.detail;
-          await tempStorage.writeChecked(result); // save on local
-          return result;
+          // await tempStorage.writeChecked(result); // save on local
+          // return result;
         }
         result.totalReservation = reservationRates.total;
         // console.log(`Total reservation: ${reservationRates.total}`);
@@ -532,7 +539,7 @@ export default class PITChecker {
           result.prePaidMethod.data.result;
 
         if (comparission.pass) {
-          // save invoice data
+          // get invoice data
           if (
             result.prePaidMethod.data.coupon.providerName === "couponACCESS"
           ) {
@@ -549,8 +556,8 @@ export default class PITChecker {
               result.invoiceSettings.companyName =
                 registerCardAnalyzer.fiscalName;
 
-              await tempStorage.writeChecked(result); // save on local
-              return result;
+              // await tempStorage.writeChecked(result); // save on local
+              // return result;
             }
           }
 
@@ -558,6 +565,14 @@ export default class PITChecker {
           result.invoiceSettings.companyName = patternMatches.provider;
         }
       }
+
+      if (result.prePaidMethod.type === CERTIFICATE) {
+        result.invoiceSettings.receptorId = MARRIOTT_RECEPTOR.receptorId;
+        result.invoiceSettings.RFC = MARRIOTT_RECEPTOR.receptorRfc;
+        result.invoiceSettings.companyName = MARRIOTT_RECEPTOR.receptorNombre;
+        result.invoiceSettings.note = prePaidMethod.data.code || "";
+      }
+
       await tempStorage.writeChecked(result); // save on local
       return result;
     }
@@ -643,7 +658,7 @@ export default class PITChecker {
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/09/04";
+    const todayDate = "2024/09/14";
 
     if (balance >= 0) {
       // console.log("Payment status: required");
@@ -728,7 +743,6 @@ export default class PITChecker {
     }
 
     // // console.log("\n");
-
     await tempStorage.writeChecked(result); // save on local
     return result;
 

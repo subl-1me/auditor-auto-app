@@ -1,3 +1,6 @@
+// MISC
+export const DB_NAME = "CECJS";
+
 // reservation search filters
 export const DEPARTURES_FILTER = "departures";
 export const IN_HOUSE_FILTER = "in-house";
@@ -55,7 +58,7 @@ export const GENERIC_RECEPTOR = {
 };
 
 export const MARRIOTT_RECEPTOR = {
-  receptorId: 132939,
+  receptorId: "132939",
   receptorRfc: "XEXX010101000",
   receptorNombre: "MARRIOTT SWITZERLAND LICENSING COMPANY S AR L",
   receptorRegimen: "616",
@@ -92,7 +95,7 @@ export const CFDI_USES = {
   GENERAL_USE: "603 - GASTOS EN GENERAL",
 };
 
-export const MARRIOTT_RECEPTOR_ID = 132939;
+export const MARRIOTT_RECEPTOR_ID = "132939";
 export const MARRIOTT_RECEPTOR_RFC = "XEXX010101000";
 export const MARRIOTT_RECEPTOR_NAME = "MARRIOTT SWITZERLAND LICENSING COMPANY";
 
@@ -147,7 +150,6 @@ export const HOME_MENU_OPERATION_NAMES = [
   "Print docs",
   "Check reservation",
   "Check PIT",
-  "Cancel reservation manually",
   // "Check all virtual cards",
   "Utils",
   // "Settings",

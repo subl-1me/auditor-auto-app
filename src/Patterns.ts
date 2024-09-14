@@ -22,6 +22,7 @@ export const BearerVarDeclarationPattern = new RegExp(
 export const BearerValuePattern = new RegExp(`"([\\s\\S\\t.]*?)"`);
 
 //Reservations
+export const tableDataPattern = /<td(.*?)>(.*)<\/td>/;
 
 // Front2Go system
 export const SystemDatePattern = /\d{4}\/\d{2}\/\d{2}/;

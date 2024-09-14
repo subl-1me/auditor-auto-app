@@ -51,89 +51,26 @@ export default class PrePaidApplier {
   }
 
   async performPrePaidApplier(): Promise<any> {
-    console.log("Getting all departures...");
+    console.log("Recopiling reservations data...");
+
     this.departures = await getReservationList(DEPARTURES_FILTER);
     // work only with pre-paid
-    const prePaidReservations = await this.getPrePaidDepartures();
+    let prePaidReservations: any = [];
+    const checkedList = await this.tempStorage.readChecked();
+    const checkedListKeys = Object.keys(checkedList.PRE_PAID);
 
-    // const alreadyChecked = await this.tempStorage.readChecked();
-    // const prePaidReservations = alreadyChecked.PRE_PAID;
-    // const { VIRTUAL_CARD, COUPON, CERTIFICATE } = prePaidReservations;
-
-    // console.log(`\n-----------------------------`);
-    // console.log("The following pre-paid method payments will be applied:");
-
-    // console.log(`-----------------------------`);
-    // console.log(`VIRTUAL CARDS:`);
-    // console.log(`-----------------------------\n`);
-    // VIRTUAL_CARD.forEach((prePaidReservation: any) => {
-    //   console.log(`Room: ${prePaidReservation.room}`);
-    //   console.log(
-    //     `VCC provider: ${prePaidReservation.prePaidMethod.data.provider}`
-    //   );
-    //   console.log(
-    //     `VCC Amount: ${prePaidReservation.prePaidMethod.data.amount}`
-    //   );
-    //   console.log(
-    //     `Active: ${prePaidReservation.prePaidMethod.data.readyToCharge}`
-    //   );
-    //   console.log("---------------");
-    // });
-
-    // console.log(`\n-----------------------------`);
-    // console.log(`COUPONS:`);
-    // console.log(`-----------------------------\n`);
-    // COUPON.forEach((prePaidReservation: any) => {
-    //   console.log(`Room: ${prePaidReservation.room}`);
-    //   console.log(
-    //     `Coupon provider: ${prePaidReservation.prePaidMethod.data.coupon.providerName}`
-    //   );
-    //   console.log(
-    //     `Is coupon OK?: ${prePaidReservation.prePaidMethod.data.result.comparission.pass}`
-    //   );
-    //   console.log("---------------");
-    // });
-
-    // console.log(`\n-----------------------------`);
-    // console.log(`CERTIFICATE:`);
-    // console.log(`-----------------------------`);
-    // CERTIFICATE.forEach((prePaidReservation: any) => {
-    //   console.log(`Room: ${prePaidReservation.room}`);
-    //   console.log(`Certificate ID: ${prePaidReservation.prePaidMethod.data}`);
-    //   console.log("---------------");
-    // });
-
-    // console.log("\n");
-    // const confirmPrompt = [
-    //   {
-    //     type: "confirm",
-    //     name: "conf",
-    //     message: "wanna confirm?",
-    //   },
-    // ];
-
-    // const skippedByUserPrompt = [
-    //   {
-    //     type: "input",
-    //     name: "skip",
-    //     message: "Type reservations rooms to skip:",
-    //   },
-    // ];
-
-    // const skipResponse = await inquirer.prompt(skippedByUserPrompt);
-    // const skipInput = skipResponse.skip;
-    // const skipList = skipInput
-    //   .split(" ")
-    //   .map((roomString: string) => Number(roomString));
-
-    // const response = await inquirer.prompt(confirmPrompt);
-    // const answer = response.conf;
-
-    // if (!answer) {
-    //   console.log("Skipping...");
-    //   return;
-    // }
-    // console.log("Appliying prepaid methods...");
+    checkedListKeys.forEach((key) => {
+      this.departures.forEach((departure) => {
+        let isReservationChecked = checkedList.PRE_PAID[key].find(
+          (checked: any) => checked.room === departure.room
+        );
+        if (isReservationChecked) {
+          departure.prePaidMethod = isReservationChecked.prePaidMethod;
+          prePaidReservations.push(departure);
+        }
+      });
+    });
+    // prePaidReservations = await this.getPrePaidDepartures();
 
     const getLedgersPromises: any = [];
     for (const reservation of prePaidReservations) {
@@ -146,17 +83,15 @@ export default class PrePaidApplier {
     }
 
     // set ledgers to its reservation
-    const ledgerResults = await Promise.all(getLedgersPromises).then(
-      (ledgersList) => {
-        for (let i = 0; i < ledgersList.length; i++) {
-          prePaidReservations[i].ledgers = ledgersList[i];
-        }
+    await Promise.all(getLedgersPromises).then((ledgersList) => {
+      for (let i = 0; i < ledgersList.length; i++) {
+        prePaidReservations[i].ledgers = ledgersList[i];
       }
-    );
+    });
 
-    prePaidReservations.forEach((reservation) => {
+    prePaidReservations.forEach((reservation: Reservation) => {
       console.log("\n---");
-      console.log(`${reservation.guestName} - ${reservation.room}`);
+      console.log(`${reservation.room} - ${reservation.guestName}`);
       if (
         reservation.prePaidMethod &&
         reservation.prePaidMethod.type === VIRTUAL_CARD

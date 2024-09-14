@@ -2,6 +2,8 @@ import MenuStack from "./src/MenuStack";
 import Home from "./src/operations/home/HomeMenu";
 import MenuUtils from "./src/utils/menuUtils";
 import dotenv from "dotenv";
+import { getReservationLogs } from "./src/utils/reservationUtlis";
+
 dotenv.config();
 
 async function main(): Promise<void> {

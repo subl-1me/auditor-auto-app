@@ -27,6 +27,8 @@ export default interface PitCheckerResult {
     RFC: string;
     companyName: string;
     emails: string[];
+    note?: string;
+    receptorId?: string;
   };
   totalReservation?: number;
   checkDate: Date;
