@@ -1,6 +1,10 @@
 // MISC
 export const DB_NAME = "CECJS";
 
+// Reservation checker remarks
+export const RATE_CHANGE = "RATE CHANGE";
+export const EXTRA_PAX = "EXTRA PAX COST";
+
 // reservation search filters
 export const DEPARTURES_FILTER = "departures";
 export const IN_HOUSE_FILTER = "in-house";
@@ -20,74 +24,23 @@ export const INVOICED = "Timbrado";
 export const PRE_INVOICED = "PreFactura";
 
 // Invoicing default receptors info
-export const GENERIC_RECEPTOR_ID = 43;
-export const GENERIC_RECEPTOR_RFC = "XAXX010101000";
-export const GENERIC_RECEPTOR_NAME = "Generico";
-
 export const GENERIC_RECEPTOR = {
   receptorId: 43,
   receptorRfc: "XAXX010101000",
   receptorNombre: "Generico",
   receptorRegimen: "616",
-  receptorCalle: "",
-  receptorNoexterior: "",
-  receptorNointerior: "",
-  receptorColonia: "",
-  receptorLocalidad: "",
-  receptorReferencia: "",
-  receptorMunicipio: "",
-  receptorEstado: "",
-  receptorPais: "MEXICO",
   receptorCpostal: "01000",
-  receptorEstatus: "4",
-  receptorNoCuenta: "",
-  receptorMetododepago: "",
-  countryName: "MEXICO",
-  stateName: "",
-  tipoProceso: "",
-  tipoComite: "",
-  ambito: "",
-  claveEntidad: "",
-  idContabilidad: "000000",
-  ineVersion: "          ",
-  receptorPp: false,
   receptorUsoCfdi: "S01",
-  receptorEmail: "",
-  numRegIdTrib: null,
-  receptorArcode: "LCCXAX0903",
 };
 
+// Default mrrt
 export const MARRIOTT_RECEPTOR = {
   receptorId: "132939",
   receptorRfc: "XEXX010101000",
   receptorNombre: "MARRIOTT SWITZERLAND LICENSING COMPANY S AR L",
   receptorRegimen: "616",
-  receptorCalle: ".",
-  receptorNoexterior: ".",
-  receptorNointerior: ".",
-  receptorColonia: null,
-  receptorLocalidad: null,
-  receptorReferencia: null,
-  receptorMunicipio: null,
-  receptorEstado: null,
-  receptorPais: "SUIZA",
   receptorCpostal: "00000",
-  receptorEstatus: "4",
-  receptorNoCuenta: "",
-  receptorMetododepago: "",
-  countryName: "SUIZA",
-  stateName: null,
-  tipoProceso: "",
-  tipoComite: "",
-  ambito: "",
-  claveEntidad: "",
-  idContabilidad: "",
-  ineVersion: "          ",
-  receptorPp: false,
   receptorUsoCfdi: "S01",
-  receptorEmail: "",
-  numRegIdTrib: "XEXX010101000",
-  receptorArcode: "LCCXEX2911",
 };
 
 export const CFDI_USES = {

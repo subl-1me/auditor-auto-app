@@ -4,7 +4,7 @@ import Spinnies from "spinnies";
 
 dotenv.config();
 
-const { FRONT_API_GET_REGISTRATION_CARD } = process.env;
+const { FRONT_API_GET_REGISTRATION_CARD, TODAY_DATE } = process.env;
 
 import {
   getReservationList,
@@ -22,12 +22,16 @@ import {
   CHECK_NEWER,
   COUPON,
   ERROR,
+  EXTRA_PAX,
   FULLY_PAID,
+  GENERAL_USE,
   IN_HOUSE_FILTER,
   MARRIOTT_RECEPTOR,
+  NO_FISCAL_USE,
   PARTIAL_PAID,
   PENDING,
   PRE_PAID,
+  RATE_CHANGE,
   ROUTED,
   ROUTER,
   UNKNOWN,
@@ -448,7 +452,12 @@ export default class PITChecker {
         RFC: "",
         companyName: "",
         emails: [],
+        fiscalUse: GENERAL_USE,
+        receptor: {
+          receptorId: "", // default
+        },
       },
+      remarks: [],
       checkDate: new Date(),
     };
 
@@ -462,6 +471,13 @@ export default class PITChecker {
       reservation.id,
       "CHIN"
     );
+
+    if (reservation.paxNo >= 3) {
+      result.remarks.push({
+        type: EXTRA_PAX,
+        description: `This reservation has ${reservation.paxNo} pax(s). An additional amount could be applied.`,
+      });
+    }
 
     // console.log("\n---------");
     // console.log(`Ledgers for: ${reservation.guestName} ${reservation.room}`);
@@ -501,8 +517,14 @@ export default class PITChecker {
       // if (ledgerClassification.active.length > 0) {
       //   ledgerClassification.active[0].isPrincipal = true;
       // }
-      console.log("Searching for rate changes...");
       const rateChangeLogs = await getReservationLogs(reservation.id);
+      if (rateChangeLogs.length > 1) {
+        result.remarks.push({
+          type: RATE_CHANGE,
+          description: `Rate was changed (${rateChangeLogs.length}) times. Please verify.`,
+        });
+      }
+
       result.paymentStatus = PRE_PAID;
       result.prePaidMethod = prePaidMethod;
       if (result.prePaidMethod.type === UNKNOWN) {
@@ -567,10 +589,10 @@ export default class PITChecker {
       }
 
       if (result.prePaidMethod.type === CERTIFICATE) {
-        result.invoiceSettings.receptorId = MARRIOTT_RECEPTOR.receptorId;
-        result.invoiceSettings.RFC = MARRIOTT_RECEPTOR.receptorRfc;
+        result.invoiceSettings.receptor = MARRIOTT_RECEPTOR;
         result.invoiceSettings.companyName = MARRIOTT_RECEPTOR.receptorNombre;
         result.invoiceSettings.note = prePaidMethod.data.code || "";
+        result.invoiceSettings.fiscalUse = NO_FISCAL_USE;
       }
 
       await tempStorage.writeChecked(result); // save on local
@@ -658,7 +680,7 @@ export default class PITChecker {
     const { rates, total } = ratesDetail;
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    const todayDate = "2024/09/14";
+    const todayDate = TODAY_DATE || "";
 
     if (balance >= 0) {
       // console.log("Payment status: required");
@@ -745,61 +767,5 @@ export default class PITChecker {
     // // console.log("\n");
     await tempStorage.writeChecked(result); // save on local
     return result;
-
-    // only get ledgers that should be scanned to avoid useless requests
-    // reservation.ledgers = await getReservationLedgerList(
-    //   reservation.id,
-    //   "CHIN"
-    // );
-
-    // for each active ledger check if is has entire payment
-    // if (active.length === 0) {
-    //   // set default ledger no 1.
-    //   // analyzer
-    // }
-
-    // const rates = await getReservationRates(reservation.id);
-    // const analyzer = await analyzeLedgers(ledgerClassification, rates);
-    // console.log(analyzer);
-    // console.log("-------\n");
-
-    // const paidLedgers = reservation.ledgers.filter(
-    //   (ledger: Ledger) =>
-    //     ledger.status === "CLOSED" && ledger.transactions.length > 0
-    // );
-
-    // console.log("\n-- PAID LEDGERS");
-    // console.log(paidLedgers);
-    // console.log("---");
-
-    // const routings = await getReservationRoutings(reservation.id);
-    // if (routings) {
-    //   const routingCheckResult = await this.checkRouting(routings);
-    //   if (!routings.isRouter) {
-    //     result.paymentStatus = ROUTED;
-    //     result.routing.childs = routings.routed;
-    //     result.routing.parentId = routings.routerId;
-    //   } else {
-    //     result.paymentStatus = ROUTER;
-    //     result.routing.isParent = true;
-    //     result.routing.parentId = routings.routerId;
-    //   }
-    //   await tempStorage.writeChecked(result); // save on local
-    //   return result;
-    // }
-
-    // const activeLedger = reservation.ledgers.find(
-    //   (ledger) => ledger.isPrincipal
-    // );
-
-    // if (!activeLedger) {
-    //   console.log("No active ledger found.");
-    //   return {
-    //     error: true,
-    //     message: "No active ledger found.",
-    //   };
-    // }
-
-    // default
   }
 }

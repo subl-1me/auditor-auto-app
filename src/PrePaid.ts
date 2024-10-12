@@ -205,7 +205,7 @@ export default class PrePaid {
     );
 
     if (!prePaidMethod) {
-      console.log("Prepaid method cannot be undefined.");
+      console.log("Prepaid method cannot be undefined.\n");
       return {
         error: true,
         message: "Prepaid method cannot be undefined.",
@@ -214,7 +214,7 @@ export default class PrePaid {
 
     if (!activeLedger) {
       console.log(
-        "No current active ledger was found to apply prepaid method."
+        "No current active ledger was found to apply prepaid method.\n"
       );
       return {
         error: true,
@@ -223,7 +223,7 @@ export default class PrePaid {
     }
 
     if (activeLedger.balance === 0 || activeLedger.transactions.length === 0) {
-      console.log("Payment cannot be applied with 0 balance.");
+      console.log("Payment cannot be applied with 0 balance.\n");
       return {
         error: true,
         message: "Payment cannot be applied with 0 balance.",
@@ -246,6 +246,7 @@ export default class PrePaid {
         });
 
         console.log(pymntApplierRes.data);
+        console.log("Points payment was applied.\n");
         break;
       case VIRTUAL_CARD:
         if (
@@ -258,7 +259,7 @@ export default class PrePaid {
 
         if (!prePaidMethod.data.readyToCharge) {
           console.log(
-            "This VCC is not available to charge. Please check it manually."
+            "This VCC is not available to charge. Please check it manually.\n"
           );
           break;
         }
@@ -268,6 +269,8 @@ export default class PrePaid {
           prePaidMethod.data,
           activeLedger
         );
+
+        console.log("Virtual Card payment was applied.\n");
         break;
       case COUPON:
         pymntApplierRes = await addNewPayment({
@@ -277,7 +280,7 @@ export default class PrePaid {
           reservationCode: `${reservation.id}.${activeLedger?.ledgerNo}`,
         });
 
-        console.log(pymntApplierRes.data);
+        console.log(pymntApplierRes.data + "\n");
         break;
       default:
         console.log("Trying to apply an invalid payment method:");

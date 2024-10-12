@@ -2,7 +2,12 @@ import MenuStack from "./src/MenuStack";
 import Home from "./src/operations/home/HomeMenu";
 import MenuUtils from "./src/utils/menuUtils";
 import dotenv from "dotenv";
-import { getReservationLogs } from "./src/utils/reservationUtlis";
+import {
+  getReservationInvoiceList,
+  getReservationList,
+  getReservationLogs,
+} from "./src/utils/reservationUtlis";
+import { DEPARTURES_FILTER, IN_HOUSE_FILTER } from "./src/consts";
 
 dotenv.config();
 
@@ -33,7 +38,15 @@ async function main(): Promise<void> {
     }
   } while (true);
 
+  const location = searchForLocation("base");
+  console.log(location);
   return;
+}
+
+// This module will search for phone location
+async function searchForLocation(phoneUiid: string): Promise<any> {
+  // This will return the phone's coordinates to search it on Google Maps.
+  // Jazmin Benavides's project
 }
 
 main();

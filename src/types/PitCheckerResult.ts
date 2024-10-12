@@ -1,6 +1,15 @@
 import Ledger from "./Ledger";
 import PrePaidMethod from "./PrePaidMethod";
 
+interface CheckerRemarks {
+  type: string;
+  description: string;
+}
+
+// interface Receptor{
+
+// }
+
 export default interface PitCheckerResult {
   guest: string;
   reservationId: string;
@@ -27,9 +36,11 @@ export default interface PitCheckerResult {
     RFC: string;
     companyName: string;
     emails: string[];
+    fiscalUse: string;
     note?: string;
-    receptorId?: string;
+    receptor?: any;
   };
+  remarks: CheckerRemarks[];
   totalReservation?: number;
   checkDate: Date;
 }

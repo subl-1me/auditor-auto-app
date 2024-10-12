@@ -1,9 +1,7 @@
 import FrontService from "../services/FrontService";
 import TokenStorage from "./TokenStorage";
 import Scrapper from "../Scrapper";
-import { PdfReader } from "pdfreader";
 import Pdfparser from "pdf2json";
-import fs from "fs";
 
 // Types
 import Ledger from "../types/Ledger";
@@ -25,6 +23,8 @@ import {
   BOOKING,
   DB_NAME,
 } from "../consts";
+
+const { TODAY_DATE } = process.env;
 
 import {
   invoiceEventHTMLElemPattern,
@@ -91,7 +91,7 @@ export async function getReservationLogs(reservationId: string): Promise<any> {
   const scrapper = new Scrapper(response);
   const logs = await scrapper.extractReservationLogs();
   const logsCategorization = await categorizeReservationLogs(logs);
-  return logs;
+  return logsCategorization;
 }
 
 async function categorizeReservationLogs(logs: any): Promise<ReservationLog[]> {
@@ -121,7 +121,6 @@ async function categorizeReservationLogs(logs: any): Promise<ReservationLog[]> {
     }
   });
 
-  console.log(reservationLogs);
   return reservationLogs;
 }
 
@@ -168,6 +167,7 @@ export async function getReservationById(
 ): Promise<Reservation> {
   let reservation: Reservation = {
     id: "",
+    paxNo: 1,
     guestName: "",
     room: 0,
     dateIn: "",
@@ -778,154 +778,154 @@ function getTotalNightsPaid(rateDetail: RateDetails, balance: number): any {
   }
 }
 
-function roomRentTracer(
-  ledgerClassification: any,
-  reservationRates: RateDetails
-): any {
-  const { invoiced, invoicable, active } = ledgerClassification;
-  // TODO: Search for NO ROOM CHARGES to skip it
+// function roomRentTracer(
+//   ledgerClassification: any,
+//   reservationRates: RateDetails
+// ): any {
+//   const { invoiced, invoicable, active } = ledgerClassification;
+//   // TODO: Search for NO ROOM CHARGES to skip it
 
-  // TODO: Search for room charges to compare with rates
-  // console.log("Reservation rates: ");
-  // console.log(rates);
-  // console.log("\n");
-  const invoicedRentTracer: any = [];
-  const invoicableRentTracer: any = [];
-  const activeRentTracer: any = [];
-  // TODO: Categorize each charge to handle complex movements inside each ledger
-  invoiced.forEach((ledger: Ledger) => {
-    console.log(`For invoiced ledger ${ledger.ledgerNo}:`);
-    const charges = ledger.transactions.filter(
-      (transaction) =>
-        transaction.type === "CHARGE" && transaction.code === "HAB"
-    );
-    if (charges.length > 0) {
-      const chargesComparission = compareReservationRatesWithCharges(
-        ledger.ledgerNo,
-        charges,
-        reservationRates
-      );
+//   // TODO: Search for room charges to compare with rates
+//   // console.log("Reservation rates: ");
+//   // console.log(rates);
+//   // console.log("\n");
+//   const invoicedRentTracer: any = [];
+//   const invoicableRentTracer: any = [];
+//   const activeRentTracer: any = [];
+//   // TODO: Categorize each charge to handle complex movements inside each ledger
+//   invoiced.forEach((ledger: Ledger) => {
+//     console.log(`For invoiced ledger ${ledger.ledgerNo}:`);
+//     const charges = ledger.transactions.filter(
+//       (transaction) =>
+//         transaction.type === "CHARGE" && transaction.code === "HAB"
+//     );
+//     if (charges.length > 0) {
+//       const chargesComparission = compareReservationRatesWithCharges(
+//         ledger.ledgerNo,
+//         charges,
+//         reservationRates
+//       );
 
-      invoicedRentTracer.push(chargesComparission);
+//       invoicedRentTracer.push(chargesComparission);
 
-      // console.log(chargesComparission);
-      // const lastCharge = charges[charges.length];
-      // const lastChargeDate = new Date(lastCharge.date);
-      // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
-      // console.log(rates);
-      // console.log(lastChargeDate);
-      // console.log(lastChargeDateString);
-      // // console.log(charges);
+//       // console.log(chargesComparission);
+//       // const lastCharge = charges[charges.length];
+//       // const lastChargeDate = new Date(lastCharge.date);
+//       // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
+//       // console.log(rates);
+//       // console.log(lastChargeDate);
+//       // console.log(lastChargeDateString);
+//       // // console.log(charges);
 
-      // const lastChargeIndex = rates.findIndex(
-      //   (rate) => rate.dateToApply === lastChargeDateString
-      // );
-      // if (!lastChargeIndex || lastChargeIndex === -1) {
-      //   console.log(`${lastCharge.date} is last rate.`);
-      // } else {
-      //   const nextRateToCharge = rates[lastChargeIndex + 1];
-      //   console.log(
-      //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
-      //   );
-      // }
-    } else {
-      console.log(
-        `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
-      );
-    }
+//       // const lastChargeIndex = rates.findIndex(
+//       //   (rate) => rate.dateToApply === lastChargeDateString
+//       // );
+//       // if (!lastChargeIndex || lastChargeIndex === -1) {
+//       //   console.log(`${lastCharge.date} is last rate.`);
+//       // } else {
+//       //   const nextRateToCharge = rates[lastChargeIndex + 1];
+//       //   console.log(
+//       //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+//       //   );
+//       // }
+//     } else {
+//       console.log(
+//         `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
+//       );
+//     }
 
-    // const lastChargeDate = new Date(lastCharge.date);
-    console.log("\n---");
-  });
+//     // const lastChargeDate = new Date(lastCharge.date);
+//     console.log("\n---");
+//   });
 
-  invoicable.forEach((ledger: Ledger) => {
-    console.log(`For invoicable ledger ${ledger.ledgerNo}:`);
-    const charges = ledger.transactions.filter(
-      (transaction) =>
-        transaction.type === "CHARGE" && transaction.code === "HAB"
-    );
-    // console.log(charges);
-    if (charges.length > 0) {
-      const chargesComparission = compareReservationRatesWithCharges(
-        ledger.ledgerNo,
-        charges,
-        reservationRates
-      );
+//   invoicable.forEach((ledger: Ledger) => {
+//     console.log(`For invoicable ledger ${ledger.ledgerNo}:`);
+//     const charges = ledger.transactions.filter(
+//       (transaction) =>
+//         transaction.type === "CHARGE" && transaction.code === "HAB"
+//     );
+//     // console.log(charges);
+//     if (charges.length > 0) {
+//       const chargesComparission = compareReservationRatesWithCharges(
+//         ledger.ledgerNo,
+//         charges,
+//         reservationRates
+//       );
 
-      invoicableRentTracer.push(chargesComparission);
+//       invoicableRentTracer.push(chargesComparission);
 
-      // console.log(chargesComparission);
-      // const lastCharge = charges[charges.length];
-      // const lastChargeDate = new Date(lastCharge.date);
-      // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
-      // console.log(rates);
-      // console.log(lastChargeDate);
-      // console.log(lastChargeDateString);
+//       // console.log(chargesComparission);
+//       // const lastCharge = charges[charges.length];
+//       // const lastChargeDate = new Date(lastCharge.date);
+//       // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
+//       // console.log(rates);
+//       // console.log(lastChargeDate);
+//       // console.log(lastChargeDateString);
 
-      // const lastChargeIndex = rates.findIndex(
-      //   (rate) => rate.dateToApply === lastChargeDateString
-      // );
-      // if (!lastChargeIndex || lastChargeIndex === -1) {
-      //   console.log(`${lastCharge.date} is last rate.`);
-      // } else {
-      //   const nextRateToCharge = rates[lastChargeIndex + 1];
-      //   console.log(
-      //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
-      //   );
-      // }
-    } else {
-      console.log(
-        `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
-      );
-    }
-    console.log("\n---");
-  });
+//       // const lastChargeIndex = rates.findIndex(
+//       //   (rate) => rate.dateToApply === lastChargeDateString
+//       // );
+//       // if (!lastChargeIndex || lastChargeIndex === -1) {
+//       //   console.log(`${lastCharge.date} is last rate.`);
+//       // } else {
+//       //   const nextRateToCharge = rates[lastChargeIndex + 1];
+//       //   console.log(
+//       //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+//       //   );
+//       // }
+//     } else {
+//       console.log(
+//         `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
+//       );
+//     }
+//     console.log("\n---");
+//   });
 
-  active.forEach((ledger: Ledger) => {
-    console.log(`For active ledger ${ledger.ledgerNo}:`);
-    const charges = ledger.transactions.filter(
-      (transaction) =>
-        transaction.type === "CHARGE" && transaction.code === "HAB"
-    );
-    if (charges.length > 0) {
-      // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
-      const chargesComparission = compareReservationRatesWithCharges(
-        ledger.ledgerNo,
-        charges,
-        reservationRates
-      );
+//   active.forEach((ledger: Ledger) => {
+//     console.log(`For active ledger ${ledger.ledgerNo}:`);
+//     const charges = ledger.transactions.filter(
+//       (transaction) =>
+//         transaction.type === "CHARGE" && transaction.code === "HAB"
+//     );
+//     if (charges.length > 0) {
+//       // const lastChargeDateString = `${lastChargeDate.getFullYear()}/${lastChargeDate.getMonth()}/${lastChargeDate.getDay()}`;
+//       const chargesComparission = compareReservationRatesWithCharges(
+//         ledger.ledgerNo,
+//         charges,
+//         reservationRates
+//       );
 
-      activeRentTracer.push(chargesComparission);
+//       activeRentTracer.push(chargesComparission);
 
-      // console.log(chargesComparission);
+//       // console.log(chargesComparission);
 
-      // console.log(lastChargeDateString);
-      // const lastChargeIndex = rates.findIndex(
-      //   (rate) => rate.dateToApply === lastChargeDateString
-      // );
-      // if (!lastChargeIndex || lastChargeIndex === -1) {
-      //   console.log(`${lastCharge} is last rate.`);
-      // } else {
-      //   const nextRateToCharge = rates[lastChargeIndex + 1];
-      //   console.log(
-      //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
-      //   );
-      // }
-    } else {
-      console.log(
-        `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
-      );
-    }
-    // console.log(charges);
-    console.log("\n---");
-  });
+//       // console.log(lastChargeDateString);
+//       // const lastChargeIndex = rates.findIndex(
+//       //   (rate) => rate.dateToApply === lastChargeDateString
+//       // );
+//       // if (!lastChargeIndex || lastChargeIndex === -1) {
+//       //   console.log(`${lastCharge} is last rate.`);
+//       // } else {
+//       //   const nextRateToCharge = rates[lastChargeIndex + 1];
+//       //   console.log(
+//       //     `Next rate to apply: ${nextRateToCharge.dateToApply} - ${nextRateToCharge.totalNoTax}`
+//       //   );
+//       // }
+//     } else {
+//       console.log(
+//         `No charges found in ledger no. ${ledger.ledgerNo} - status: ${ledger.status}`
+//       );
+//     }
+//     // console.log(charges);
+//     console.log("\n---");
+//   });
 
-  return {
-    invoicedRentTracer,
-    invoicableRentTracer,
-    activeRentTracer,
-  };
-}
+//   return {
+//     invoicedRentTracer,
+//     invoicableRentTracer,
+//     activeRentTracer,
+//   };
+// }
 
 export function compareReservationRatesWithCharges(
   ledgerNo: number,
@@ -1056,183 +1056,183 @@ export async function checkAllRates(
   return missingRates;
 }
 
-export async function analyzeLedgers(
-  ledgerClassification: any,
-  reservationId: string
-): Promise<any> {
-  const todayDate = "2024/05/06";
-  const ledgerResults: any = [];
-  const reservationRates = await getReservationRates(reservationId);
-  // TODO: Check if there's only one payment to all reservation.
-  // if (active.length === 0) {
-  //   const defaultLedger = empty.find(
-  //     (ledger: Ledger) => ledger.status === "OPEN"
-  //   );
-  //   console.log(
-  //     `Ledger No. ${defaultLedger.ledgerNo || 1} was setted as default .`
-  //   );
+// export async function analyzeLedgers(
+//   ledgerClassification: any,
+//   reservationId: string
+// ): Promise<any> {
+//   const todayDate = "2024/05/06";
+//   const ledgerResults: any = [];
+//   const reservationRates = await getReservationRates(reservationId);
+//   // TODO: Check if there's only one payment to all reservation.
+//   // if (active.length === 0) {
+//   //   const defaultLedger = empty.find(
+//   //     (ledger: Ledger) => ledger.status === "OPEN"
+//   //   );
+//   //   console.log(
+//   //     `Ledger No. ${defaultLedger.ledgerNo || 1} was setted as default .`
+//   //   );
 
-  //   // TODO: Analyze previous ledgers
-  //   return ledgerResults;
-  // }
+//   //   // TODO: Analyze previous ledgers
+//   //   return ledgerResults;
+//   // }
 
-  const rentTracer = await roomRentTracer(
-    ledgerClassification,
-    reservationRates
-  );
+//   const rentTracer = await roomRentTracer(
+//     ledgerClassification,
+//     reservationRates
+//   );
 
-  const { invoicedRentTracer, invoicableRentTracer, activeRentTracer } =
-    rentTracer;
+//   const { invoicedRentTracer, invoicableRentTracer, activeRentTracer } =
+//     rentTracer;
 
-  // start checking from previous invoiced ledgers
-  // by following rates timeline
-  console.log("Invoicable:");
-  console.log(invoicableRentTracer);
-  console.log("Invoiced");
-  console.log(invoicedRentTracer);
-  console.log("active:");
-  console.log(activeRentTracer);
-  let nextRate: any = null;
-  let pendingRateToApply: any = null;
-  if (invoicedRentTracer.length > 0) {
-    invoicedRentTracer.forEach((rentTracing: any, index: number) => {
-      console.log("\nRent tracing:");
-      console.log(rentTracer);
-      if (!nextRate) {
-        nextRate = rentTracing.nextRateExpected;
-      } else {
-        const firstRateApplied = rentTracing.appliedRates[0];
-        if (
-          rentTracing &&
-          nextRate.dateToApply === firstRateApplied.dateToApply
-        ) {
-          console.log("Next rates match...");
-          console.log(
-            `Ledger no. ${rentTracing.ledgerNo} follows correctly ledger.no ${
-              rentTracing.ledgerNo - 1
-            }`
-          );
-          nextRate = rentTracing.nextRateExpected;
-        } else {
-          console.log(`Pending rate to charge on active ledger:`);
-          console.log(firstRateApplied);
-          pendingRateToApply = firstRateApplied;
-        }
-      }
-    });
-  }
+//   // start checking from previous invoiced ledgers
+//   // by following rates timeline
+//   console.log("Invoicable:");
+//   console.log(invoicableRentTracer);
+//   console.log("Invoiced");
+//   console.log(invoicedRentTracer);
+//   console.log("active:");
+//   console.log(activeRentTracer);
+//   let nextRate: any = null;
+//   let pendingRateToApply: any = null;
+//   if (invoicedRentTracer.length > 0) {
+//     invoicedRentTracer.forEach((rentTracing: any, index: number) => {
+//       console.log("\nRent tracing:");
+//       console.log(rentTracer);
+//       if (!nextRate) {
+//         nextRate = rentTracing.nextRateExpected;
+//       } else {
+//         const firstRateApplied = rentTracing.appliedRates[0];
+//         if (
+//           rentTracing &&
+//           nextRate.dateToApply === firstRateApplied.dateToApply
+//         ) {
+//           console.log("Next rates match...");
+//           console.log(
+//             `Ledger no. ${rentTracing.ledgerNo} follows correctly ledger.no ${
+//               rentTracing.ledgerNo - 1
+//             }`
+//           );
+//           nextRate = rentTracing.nextRateExpected;
+//         } else {
+//           console.log(`Pending rate to charge on active ledger:`);
+//           console.log(firstRateApplied);
+//           pendingRateToApply = firstRateApplied;
+//         }
+//       }
+//     });
+//   }
 
-  console.log("--------");
-  console.log("Next rate");
-  console.log(nextRate);
-  console.log("--------");
+//   console.log("--------");
+//   console.log("Next rate");
+//   console.log(nextRate);
+//   console.log("--------");
 
-  activeRentTracer.forEach((rentTracing: any) => {
-    if (nextRate) {
-      // Check balance from active ledger no determinate if it pays next rate
-    }
-  });
+//   activeRentTracer.forEach((rentTracing: any) => {
+//     if (nextRate) {
+//       // Check balance from active ledger no determinate if it pays next rate
+//     }
+//   });
 
-  // console.log(rentTracer);
-  //wTODO: Analyze room rent tracing in order to determinate reservation's payments behaviour
+//   // console.log(rentTracer);
+//   //wTODO: Analyze room rent tracing in order to determinate reservation's payments behaviour
 
-  // console.log(rentTracer);
+//   // console.log(rentTracer);
 
-  // active.forEach((ledger: Ledger) => {
-  //   const balance = Math.abs(ledger.balance);
-  //   const sums = getTransactionsSum(ledger.transactions);
-  //   const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
+//   // active.forEach((ledger: Ledger) => {
+//   //   const balance = Math.abs(ledger.balance);
+//   //   const sums = getTransactionsSum(ledger.transactions);
+//   //   const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
 
-  //   // pending balance - payment required
-  //   if (ledger.balance > 0) {
-  //     console.log("----");
-  //     console.log(`Pending to pay: ${balance}`);
-  //     console.log(`Total reservation: ${total}`);
-  //     console.log("----");
-  //     ledgerResults.push({
-  //       hasEntirePayment: false,
-  //       pendingToPay: true,
-  //       ledger,
-  //     });
-  //   }
+//   //   // pending balance - payment required
+//   //   if (ledger.balance > 0) {
+//   //     console.log("----");
+//   //     console.log(`Pending to pay: ${balance}`);
+//   //     console.log(`Total reservation: ${total}`);
+//   //     console.log("----");
+//   //     ledgerResults.push({
+//   //       hasEntirePayment: false,
+//   //       pendingToPay: true,
+//   //       ledger,
+//   //     });
+//   //   }
 
-  //   if (balance === total) {
-  //     console.log("----");
-  //     console.log(`Total payment was found on ledger no. ${ledger.ledgerNo}`);
-  //     console.log(`Total reservation: ${total}`);
-  //     console.log(`Total payments: ${paymentsSum}`);
-  //     console.log("----");
-  //     ledgerResults.push({
-  //       hasEntirePayment: true,
-  //       ledger,
-  //     });
-  //   }
+//   //   if (balance === total) {
+//   //     console.log("----");
+//   //     console.log(`Total payment was found on ledger no. ${ledger.ledgerNo}`);
+//   //     console.log(`Total reservation: ${total}`);
+//   //     console.log(`Total payments: ${paymentsSum}`);
+//   //     console.log("----");
+//   //     ledgerResults.push({
+//   //       hasEntirePayment: true,
+//   //       ledger,
+//   //     });
+//   //   }
 
-  //   if (balance !== total && ledger.balance < 0) {
-  //     const nightsPaid = getRemainingNights(
-  //       reservationRates,
-  //       balance,
-  //       todayDate
-  //     );
-  //     // console.log(nightsPaid);
-  //     console.log(`Nights left: ${nightsPaid.nightsLeft}`);
-  //     ledgerResults.push({
-  //       ledger,
-  //       hasEntirePayment: false,
-  //       nightsPaid: nightsPaid.nightsLeft,
-  //       // nextPaymentOn: rates[nightsPaid.nightsLeft].dateToApply,
-  //     });
-  //   }
-  // });
+//   //   if (balance !== total && ledger.balance < 0) {
+//   //     const nightsPaid = getRemainingNights(
+//   //       reservationRates,
+//   //       balance,
+//   //       todayDate
+//   //     );
+//   //     // console.log(nightsPaid);
+//   //     console.log(`Nights left: ${nightsPaid.nightsLeft}`);
+//   //     ledgerResults.push({
+//   //       ledger,
+//   //       hasEntirePayment: false,
+//   //       nightsPaid: nightsPaid.nightsLeft,
+//   //       // nextPaymentOn: rates[nightsPaid.nightsLeft].dateToApply,
+//   //     });
+//   //   }
+//   // });
 
-  return ledgerResults;
+//   return ledgerResults;
 
-  // if (active.length === 1) {
-  //   if (total === paymentsSum) {
-  //     ledgerResults.push({
-  //       isMain: true,
-  //       isFullyPaid: true,
-  //       nightsPaid: rates.length,
-  //       nightsLeft: 0,
-  //       paidUntil: rates[rates.length].dateToApply,
-  //       nextPaymentOn: "",
-  //     });
-  //     return ledgerResults;
-  //   }
+//   // if (active.length === 1) {
+//   //   if (total === paymentsSum) {
+//   //     ledgerResults.push({
+//   //       isMain: true,
+//   //       isFullyPaid: true,
+//   //       nightsPaid: rates.length,
+//   //       nightsLeft: 0,
+//   //       paidUntil: rates[rates.length].dateToApply,
+//   //       nextPaymentOn: "",
+//   //     });
+//   //     return ledgerResults;
+//   //   }
 
-  //   if (total === todayRate.totalWTax) {
-  //   }
-  // }
+//   //   if (total === todayRate.totalWTax) {
+//   //   }
+//   // }
 
-  // active.forEach((ledger: Ledger) => {});
+//   // active.forEach((ledger: Ledger) => {});
 
-  // TODO: Check every ledger in order to search a complex payment tracing to know the next rate to pay.
+//   // TODO: Check every ledger in order to search a complex payment tracing to know the next rate to pay.
 
-  // const balanceAbs = Math.abs(ledger.balance);
-  // const sums = getTransactionsSum(ledger.transactions);
-  // const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
+//   // const balanceAbs = Math.abs(ledger.balance);
+//   // const sums = getTransactionsSum(ledger.transactions);
+//   // const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
 
-  // const remainingNightsPaid = getRemainingNights(
-  //   reservationRates,
-  //   balanceAbs,
-  //   todayDate
-  // );
-  // const totalNightsPaid = getTotalNightsPaid(reservationRates, balanceAbs);
+//   // const remainingNightsPaid = getRemainingNights(
+//   //   reservationRates,
+//   //   balanceAbs,
+//   //   todayDate
+//   // );
+//   // const totalNightsPaid = getTotalNightsPaid(reservationRates, balanceAbs);
 
-  // console.log(remainingNightsPaid);
-  // console.log(totalNightsPaid);
+//   // console.log(remainingNightsPaid);
+//   // console.log(totalNightsPaid);
 
-  // const { total } = reservationRates;
-  // if (balanceAbs === 0) {
-  //   return result;
-  // }
+//   // const { total } = reservationRates;
+//   // if (balanceAbs === 0) {
+//   //   return result;
+//   // }
 
-  // if (balanceAbs === total || paymentsSum === total) {
-  //   result.isPrincipal = true;
-  //   result.hasCompletePaid = true;
-  //   return result;
-  // }
-}
+//   // if (balanceAbs === total || paymentsSum === total) {
+//   //   result.isPrincipal = true;
+//   //   result.hasCompletePaid = true;
+//   //   return result;
+//   // }
+// }
 
 export async function classifyLedgers(
   reservationId: string,
@@ -1433,6 +1433,7 @@ export async function getReservationByFilter(filter: string): Promise<any> {
     return null;
   }
 
+  const paxNo = Number(parseFloat(items[0].peopleNo).toFixed());
   const reservation: Reservation = {
     id: items[0].rsrvCode,
     guestName: items[0].nameGuest,
@@ -1440,6 +1441,7 @@ export async function getReservationByFilter(filter: string): Promise<any> {
     dateIn: items[0].dateIn,
     dateOut: items[0].dateOut,
     status: items[0].statusGuest,
+    paxNo: paxNo | 1,
     company: items[0].company,
     agency: items[0].agency,
     ledgers: [],
@@ -1497,6 +1499,8 @@ export async function getReservationList(
     return rsrvA.room - rsrvB.room;
   };
 
+  // console.log(items);
+
   // map response items to Reservation interface
   // const alreadyChecked = await tempStorage.readChecked();
   let reservations: Reservation[] = [];
@@ -1507,6 +1511,7 @@ export async function getReservationList(
     // );
     const id = item.reservationId.match(/\d+/)[0] || ""; // parse id for better handling
     const status = item.statusGuest.trim();
+    const paxNo = Number(parseFloat(item.peopleNo).toFixed());
     // const ledgers = await getReservationLedgerList(id, status);
     // const principalLedger = ledgers.find((ledger) => {
     //   const isEmpty = ledger.transactions.length > 0;
@@ -1522,6 +1527,7 @@ export async function getReservationList(
       dateIn: item.dateIn,
       dateOut: item.dateOut,
       status,
+      paxNo: paxNo || 1,
       company: item.company,
       agency: item.agency,
       ledgers: [],
@@ -1983,7 +1989,7 @@ export async function getReservationRates(
     "{rsrvIdField}",
     reservationId
   )
-    .replace("{appDateField}", "2024/09/14")
+    .replace("{appDateField}", TODAY_DATE || "")
     .replace("{rateCodeField}", rateCode);
 
   const authTokens = await TokenStorage.getData();

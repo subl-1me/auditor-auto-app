@@ -11,6 +11,7 @@ export default interface Reservation {
   status: string;
   company: string;
   agency: string;
+  paxNo: number;
   totalToPay?: number;
   prePaidMethod?: PrePaidMethod;
   invocingData?: {
