@@ -280,7 +280,8 @@ export default class PrePaid {
           reservationCode: `${reservation.id}.${activeLedger?.ledgerNo}`,
         });
 
-        console.log(pymntApplierRes.data + "\n");
+        console.log(pymntApplierRes.data);
+        console.log("\n");
         break;
       default:
         console.log("Trying to apply an invalid payment method:");

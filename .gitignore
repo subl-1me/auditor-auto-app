@@ -9,3 +9,4 @@ src/operations/invoicer/pendingToInvoice.json
 src/operations/invoicer/*-registerCard.pdf
 src/operations/invoicer/genericList.txt
 temp/
+.vscode

@@ -405,105 +405,107 @@ export default class Invoicer {
 
     let createInvoiceResponse;
     try {
-      let finalized = false;
-      do {
-        switch (invoiceType) {
-          case "System suggestion":
-            if (invoiceSettings.RFC === "") {
-              console.log("No system suggest data was found.");
+      let confirm = false;
+      switch (invoiceType) {
+        case "System suggestion":
+          if (invoiceSettings.RFC === "") {
+            console.log("No system suggest data was found.");
+            break;
+          }
+
+          // Validate RFC
+          const receptorData = await handleReceptorValidator(
+            invoiceSettings.RFC
+          );
+          if (receptorData.error) {
+            console.log("Receptor error:");
+            console.log(receptorData);
+            break;
+          }
+
+          invoiceSettings.receptor = receptorData.receptorInfo;
+          // console.log(invoiceSettings);
+          confirm = await this.confirmInvoiceSettings(invoiceSettings);
+          createInvoiceResponse = await this.createInvoice(
+            departure,
+            ledgerTarget,
+            invoiceSettings
+          );
+          break;
+        case "Generic":
+          // const genericReceptor = await handleReceptorValidator(
+          //   GENERIC_RECEPTOR_RFC
+          // );
+          // if (genericReceptor.error) {
+          //   console.log(
+          //     `Error trying to validate RFC receptor (${GENERIC_RECEPTOR_RFC}).`
+          //   break;
+          //   );
+          // }
+
+          invoiceSettings.receptor = GENERIC_RECEPTOR;
+          invoiceSettings.fiscalUse = NO_FISCAL_USE;
+          confirm = await this.confirmInvoiceSettings(invoiceSettings);
+          createInvoiceResponse = await this.createInvoice(
+            departure,
+            ledgerTarget,
+            invoiceSettings
+          );
+          break;
+        case "Input custom RFC":
+          let receptorInfo;
+          let getReceptorResponse;
+          do {
+            const RFC = await this.askForRFC();
+            if (RFC === "EXIT") {
               break;
             }
 
-            // Validate RFC
-            const receptorData = await handleReceptorValidator(
-              invoiceSettings.RFC
-            );
-            if (receptorData.error) {
-              console.log("Receptor error:");
-              console.log(receptorData);
+            console.clear();
+            console.log("Validating RFC...");
+            getReceptorResponse = await handleReceptorValidator(RFC);
+            if (!getReceptorResponse.error) {
+              receptorInfo = getReceptorResponse.receptorInfo;
               break;
             }
 
-            invoiceSettings.receptor = receptorData.receptorInfo;
-            // console.log(invoiceSettings);
-            const confirm = await this.confirmInvoiceSettings(invoiceSettings);
-            createInvoiceResponse = await this.createInvoice(
-              departure,
-              ledgerTarget,
-              invoiceSettings
-            );
-            finalized = true;
-            break;
-          case "Generic":
-            // const genericReceptor = await handleReceptorValidator(
-            //   GENERIC_RECEPTOR_RFC
-            // );
-            // if (genericReceptor.error) {
-            //   console.log(
-            //     `Error trying to validate RFC receptor (${GENERIC_RECEPTOR_RFC}).`
-            //   break;
-            //   );
-            // }
-            if (!(await this.confirmInvoiceSettings(GENERIC_RECEPTOR))) {
-              break;
-            }
-            createInvoiceResponse = await this.createInvoice(
-              departure,
-              ledgerTarget,
-              GENERIC_RECEPTOR
-            );
-            finalized = true;
-            break;
-          case "Input custom RFC":
-            let receptorInfo;
-            do {
-              const RFC = await this.askForRFC();
-              if (RFC === "EXIT") {
-                break;
-              }
+            console.log(`\nError trying to search RFC:`);
+            console.log(getReceptorResponse.message);
+          } while (true);
 
-              console.clear();
-              console.log("Validating RFC...");
-              const receptorValidator = await handleReceptorValidator(RFC);
-              if (!receptorValidator.error) {
-                receptorInfo = receptorValidator.receptorInfo;
-                break;
-              }
+          const confirmReceptor = await this.confirmInvoiceSettings(
+            receptorInfo
+          );
 
-              console.log(`\nError trying to search RFC:`);
-              console.log(receptorValidator.message);
-            } while (true);
-
-            if (!(await this.confirmInvoiceSettings(receptorInfo))) {
-              break;
-            }
-
-            let settings = {
-              repeat: false,
-              RFC: "",
-              companyName: "",
-              emails: [],
-              fiscalUse: "G03",
-              receptor: receptorInfo,
-            };
-            createInvoiceResponse = await this.createInvoice(
-              departure,
-              ledgerTarget,
-              settings
-            );
-            finalized = true;
+          if (!confirmReceptor) {
             break;
-          case "Skip":
-            await this.tempStorage.writePendingReservations(departure.id);
-            finalized = true;
-            break;
-          default:
-            finalized = true;
-            break;
-        }
-      } while (finalized);
+          }
 
-      if (invoiceType === "Skip") return;
+          invoiceSettings.receptor = receptorInfo;
+          createInvoiceResponse = await this.createInvoice(
+            departure,
+            ledgerTarget,
+            invoiceSettings
+          );
+
+          break;
+        case "Skip":
+          // await this.tempStorage.writePendingReservations(departure.id);
+          break;
+        default:
+          break;
+      }
+
+      if (!createInvoiceResponse?.invoice) {
+        console.log("\n------------------");
+        console.log("Departure invoice was marked as pending.");
+        console.log("------------------\n");
+        return invoiceSettings;
+      }
+
+      if (invoiceType === "Skip") {
+        return invoicingResponse;
+      }
 
       if (createInvoiceResponse && createInvoiceResponse.invoice) {
         const invoice = createInvoiceResponse.invoice;
@@ -514,6 +516,8 @@ export default class Invoicer {
           await this.handleSendingInvoice(invoice, departure);
         }
       }
+
+      invoicingResponse.success = true;
       return invoicingResponse;
     } catch (err) {
       console.log(err);
@@ -577,10 +581,7 @@ export default class Invoicer {
     console.log("\n--------------");
     console.log(`CONFIRM INVOICE DATA:`);
     console.log("----------------\n");
-    console.log(`RFC: ${invoiceSettings.receptorRfc}`);
-    console.log(`Name: ${invoiceSettings.receptorNombre}`);
-    console.log(`Postal code: ${invoiceSettings.receptorCpostal}`);
-    console.log(`Regimen: ${invoiceSettings.receptorRegimen}`);
+    console.log(invoiceSettings);
     console.log("----------\n");
     const confirmPrompt = [
       {
@@ -617,15 +618,21 @@ export default class Invoicer {
       );
       console.log("------------------------------------------------------\n");
 
-      const invoiceSettings = invoicingPreview.find(
+      const previousChecked = invoicingPreview.find(
         (preview: any) => preview.reservationId === departure.id
       );
-      if (invoiceSettings.RFC) {
+
+      const { invoiceSettings } = previousChecked;
+      if (invoiceSettings.RFC || invoiceSettings.RFC !== "") {
         console.log("\n------------------------------");
         console.log("Previous invoicing settings found: ");
         console.log(`RFC: ${invoiceSettings.RFC}`);
         console.log(`Fiscal name: ${invoiceSettings.companyName}`);
-        console.log("-----------------------------");
+        console.log("-----------------------------\n");
+      } else {
+        console.log("\n-----------------------------");
+        console.log("No previous invoicing settings was found.");
+        console.log("-----------------------------\n");
       }
 
       let ledgerTarget: Number = 1;
@@ -913,11 +920,10 @@ export default class Invoicer {
       folioCode: `${reservation.id}.${ledgerTarget}`,
       guestCode: reservation.id,
       receptorId: invoiceSettings.receptor
-        ? invoiceSettings.receptor.receptorRfc
+        ? invoiceSettings.receptor.receptorId
         : "",
       tipoDetalle: "D",
       currency: "MXN",
-      comprobanteid: "",
       notas: invoiceSettings.notes ? invoiceSettings.notes : "",
       doctype: invoiceSettings.fiscalUse,
       receptorNameModified: invoiceSettings.receptor
@@ -958,7 +964,9 @@ export default class Invoicer {
       invoiceSettings,
       ledgerTarget
     );
-    console.log(invoicePayload + "\n");
+    console.log("\n-----");
+    console.log(invoicePayload);
+    console.log("-----\n");
     console.log(
       `CREATING INVOICE FOR: ${reservation.room} - ${reservation.guestName}...`
     );
