@@ -34,7 +34,7 @@ import {
   RATE_CHANGE,
   ROUTED,
   ROUTER,
-  UNKNOWN,
+  UNKNOWN_DOCUMENT,
   VIRTUAL_CARD,
 } from "../../consts";
 
@@ -479,19 +479,6 @@ export default class PITChecker {
       });
     }
 
-    // console.log("\n---------");
-    // console.log(`Ledgers for: ${reservation.guestName} ${reservation.room}`);
-    // const ledgerClassifications = await classifyLedgers(
-    //   reservation.id,
-    //   reservation.ledgers
-    // );
-
-    // const ledgerAnalyzer = await analyzeLedgers(
-    //   ledgerClassifications,
-    //   reservation.id
-    // );
-    // console.log("---------\n");
-
     const activeLedger = reservation.ledgers.find(
       (ledger) => ledger.status === "OPEN"
     );
@@ -527,19 +514,6 @@ export default class PITChecker {
 
       result.paymentStatus = PRE_PAID;
       result.prePaidMethod = prePaidMethod;
-      if (result.prePaidMethod.type === UNKNOWN) {
-        // console.log(
-        //   "This reservation has unknown attached documents. Please, check it manually."
-        // );
-
-        result.paymentStatus = ERROR;
-        result.hasErrors = true;
-        result.errorDetail.type = "UNKOWN DOC";
-        result.errorDetail.detail = "Document is not supported.";
-        // await tempStorage.writeChecked(result); // save on local
-        // return result;
-      }
-
       // console.log(`This is a prepaid reservation by ${prePaidMethod.type}...`);
       // console.log(prePaidMethod);
 
@@ -557,34 +531,42 @@ export default class PITChecker {
       }
 
       if (result.prePaidMethod.type === COUPON) {
-        const { comparission, patternMatches } =
-          result.prePaidMethod.data.result;
+        const primaryCoupons = result.prePaidMethod.data.coupons.filter(
+          (coupon: any) => coupon.isPrimary
+        );
+        if (primaryCoupons.length === 0) {
+          result.paymentStatus = ERROR;
+          result.hasErrors = true;
+          result.errorDetail.type = "UNKOWN DOC";
+          result.errorDetail.detail = "Document is not supported.";
+        } else {
+          for (const coupon of primaryCoupons) {
+            const { comparission, patternMatches } = coupon.analyzerResult;
 
-        if (comparission.pass) {
-          // get invoice data
-          if (
-            result.prePaidMethod.data.coupon.providerName === "couponACCESS"
-          ) {
-            const registerCardAnalyzer = await this.registrationCardAnalyzer(
-              reservation
-            );
-            if (
-              registerCardAnalyzer &&
-              registerCardAnalyzer.RFC !== "" &&
-              registerCardAnalyzer.RFC
-            ) {
-              // save invoice data
-              result.invoiceSettings.RFC = registerCardAnalyzer.RFC;
-              result.invoiceSettings.companyName =
-                registerCardAnalyzer.fiscalName;
+            if (comparission.pass) {
+              // get invoice data
+              if (coupon.providerName === "couponACCESS") {
+                const registerCardAnalyzer =
+                  await this.registrationCardAnalyzer(reservation);
+                if (
+                  registerCardAnalyzer &&
+                  registerCardAnalyzer.RFC !== "" &&
+                  registerCardAnalyzer.RFC
+                ) {
+                  // save invoice data
+                  result.invoiceSettings.RFC = registerCardAnalyzer.RFC;
+                  result.invoiceSettings.companyName =
+                    registerCardAnalyzer.fiscalName;
 
-              // await tempStorage.writeChecked(result); // save on local
-              // return result;
+                  // await tempStorage.writeChecked(result); // save on local
+                  // return result;
+                }
+              }
+
+              result.invoiceSettings.RFC = patternMatches.RFC;
+              result.invoiceSettings.companyName = patternMatches.provider;
             }
           }
-
-          result.invoiceSettings.RFC = patternMatches.RFC;
-          result.invoiceSettings.companyName = patternMatches.provider;
         }
       }
 

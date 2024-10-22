@@ -85,7 +85,7 @@ export const DOCS = "DOCS";
 // Coupon classifier
 export const UNSUPPORTED = "UNSUPPORTED";
 export const COUPON = "COUPON";
-export const UNKNOWN = "UNKNOWN";
+export const UNKNOWN_DOCUMENT = "UNKNOWN_DOCUMENT";
 
 // Coupon providers
 export const ACCESS = "CUPÓN ACCESS";

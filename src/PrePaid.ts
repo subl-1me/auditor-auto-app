@@ -17,7 +17,7 @@ import {
   COUPONS,
   DOCUMENTS,
   IN_HOUSE_FILTER,
-  UNKNOWN,
+  UNKNOWN_DOCUMENT,
   UNSUPPORTED,
   VIRTUAL_CARD,
 } from "./consts";
@@ -27,6 +27,7 @@ import FrontService from "./services/FrontService";
 import TokenStorage from "./utils/TokenStorage";
 import DocAnalyzer from "./DocumentAnalyzer";
 import GuaranteeDoc from "./types/GuaranteeDoc";
+import DocumentClassification from "./types/DocumentClassification";
 
 const { STORAGE_TEMP_PATH } = process.env;
 const docsTempStoragePath = path.join(STORAGE_TEMP_PATH || "", "docsToAnalyze");
@@ -44,68 +45,69 @@ export default class PrePaid {
     promises.push(await getReservationVCC(reservation.id));
 
     const results = await Promise.all(promises);
-    for (const data of results) {
-      let prePaidType = "";
+    for (const result of results) {
       // case certificate
-      if (typeof data === "string") {
-        prePaidType = CERTIFICATE;
+      if (typeof result === "string") {
         return {
-          type: prePaidType,
-          data: { code: data },
+          type: CERTIFICATE,
+          data: { code: result },
         };
       }
 
       // case documents
-      if (Array.isArray(data) && data.length > 0) {
-        prePaidType = UNKNOWN;
-        const documentDownloader = await this.downloadDocuments({
-          type: COUPONS,
-          data,
-        });
+      if (Array.isArray(result) && result.length > 0) {
+        const documentDownloader = await this.downloadDocuments(result);
 
         const downloads = documentDownloader.filter(
           (result: any) => result.status === 200
         );
 
         // classify documents in order to search a valid coupon
-        const coupons = await this.getCoupons(downloads);
-        if (coupons.length === 0) {
+        const documents = await this.getDocumentsClassification(downloads);
+        const { coupons, other } = documents;
+        if (coupons.length === 0 && other.length === 0) {
           return {
-            type: prePaidType,
-            data,
+            type: "ERROR",
+            data: { coupons, other },
           };
         }
 
-        const mainCoupon = await this.findPrimaryCoupon(coupons, reservation);
-        if (!mainCoupon) {
-          // console.log("Error trying to get main coupon.");
-          return null;
+        const mainCouponResults = await this.findPrimaryCoupon(
+          coupons,
+          reservation
+        );
+
+        if (mainCouponResults.length === 0) {
+          return {
+            type: UNKNOWN_DOCUMENT,
+            data: { coupons, other },
+          };
         }
 
-        // console.log(`\nCoupon pass.`);
-        // console.log("---");
-        // console.log(`Provider: ${mainCoupon.result.patternMatches.provider}`);
-        // console.log(`RFC: ${mainCoupon.result.patternMatches.RFC}`);
-        // console.log(
-        //   `To reservation: ${mainCoupon.result.patternMatches.reservationTarget}`
-        // );
-        // console.log(
-        //   `Dates: ${mainCoupon.result.patternMatches.dates.dateIn} to ${mainCoupon.result.patternMatches.dates.dateOut}`
-        // );
-        // console.log("---\n");
-        prePaidType = COUPON;
+        mainCouponResults.forEach((result: any) => {
+          const matchIndex = coupons.findIndex(
+            (coupon: any) => coupon.filePath === result.coupon.filePath
+          );
+          if (matchIndex >= 0) {
+            coupons[matchIndex].isPrimary = true;
+            coupons[matchIndex].analyzerResult = result.result;
+          }
+        });
+
         return {
-          type: prePaidType,
-          data: mainCoupon,
+          type: COUPON,
+          data: {
+            coupons,
+            other,
+          },
         };
       }
 
       // case VCC
-      if (data && data.provider && data.provider !== null) {
-        prePaidType = VIRTUAL_CARD;
+      if (result && result.provider && result.provider !== null) {
         return {
-          type: prePaidType,
-          data,
+          type: VIRTUAL_CARD,
+          data: result,
         };
       }
     }
@@ -114,17 +116,14 @@ export default class PrePaid {
   }
 
   private static async downloadDocuments(
-    prePaidMethod: PrePaidMethod
+    documents: GuaranteeDoc[]
   ): Promise<any> {
-    const isArray = Array.isArray(prePaidMethod.data);
-    if (!isArray) {
-      // console.log("This reservation has no coupons.");
-      return;
+    if (documents.length === 0) {
+      return [];
     }
 
     const authTokens = await TokenStorage.getData();
     const downloaderPromises: any = [];
-    const documents = prePaidMethod.data as GuaranteeDoc[];
     for (let i = 0; i < documents.length; i++) {
       const fileName = `${documents[i].id}-${i + 1}-document.pdf`;
       downloaderPromises.push(
@@ -156,21 +155,23 @@ export default class PrePaid {
       );
     }
 
-    let mainCoupon;
+    let primaryCoupons: any = [];
     const analyzerResults = await Promise.all(analyzerPromises);
     analyzerResults.forEach((result, index) => {
       if (result.comparission.pass) {
-        mainCoupon = {
+        primaryCoupons.push({
           result,
           coupon: coupons[index],
-        };
+        });
       }
     });
 
-    return mainCoupon;
+    return primaryCoupons;
   }
 
-  private static async getCoupons(downloads: any): Promise<any> {
+  private static async getDocumentsClassification(
+    downloads: any
+  ): Promise<any> {
     // classify documents
     const classificationPromises: any = [];
     for (const download of downloads) {
@@ -180,19 +181,27 @@ export default class PrePaid {
     }
 
     const classificationList = await Promise.all(classificationPromises);
-    const coupons: any = [];
+    const documentClassification: DocumentClassification = {
+      coupons: [],
+      other: [],
+    };
     for (let i = 0; i < classificationList.length; i++) {
-      const { classify, providerName } = classificationList[i];
-      if (classify === COUPON) {
-        coupons.push({
-          classify,
-          filePath: downloads[i].filePath,
+      const { classification, providerName } = classificationList[i];
+      if (classification === COUPON) {
+        documentClassification.coupons.push({
           providerName,
+          classification,
+          filePath: downloads[i].filePath,
+        });
+      } else {
+        documentClassification.other.push({
+          classification,
+          filePath: downloads[i].filePath,
         });
       }
     }
 
-    return coupons;
+    return documentClassification;
   }
 
   static async applyPrePaidMethod(
