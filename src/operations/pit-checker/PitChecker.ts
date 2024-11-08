@@ -36,6 +36,7 @@ import {
   ROUTER,
   UNKNOWN_DOCUMENT,
   VIRTUAL_CARD,
+  NOT_APPLICABLE,
 } from "../../consts";
 
 import Transaction from "../../types/Transaction";
@@ -191,6 +192,7 @@ export default class PITChecker {
       routers: [],
       routed: [],
     };
+    let rsrvCourtesy: any[] = [];
     let rsrvWithCertificate: any[] = [];
     let rsrvWithCoupon: any[] = [];
     let rsrvWithDocs: any[] = [];
@@ -259,6 +261,11 @@ export default class PITChecker {
         case PENDING: {
           rsrvPendingToPay.push(result.room);
           await tempStorage.writeCheckedOn(PENDING, result.room);
+          break;
+        }
+        case NOT_APPLICABLE: {
+          rsrvCourtesy.push({ room: result.room });
+          await tempStorage.writeCheckedOn(NOT_APPLICABLE, result.room);
           break;
         }
         case PRE_PAID: {
@@ -353,6 +360,8 @@ export default class PITChecker {
     console.log(rsrvWithVirtualCard);
     console.log("Coupon");
     console.log(rsrvWithCoupon);
+    console.log("Courtesy");
+    console.log(rsrvCourtesy);
     console.log("Unkown documents");
     console.log(rsrvWithDocs);
     console.log("Certificate");
@@ -681,6 +690,14 @@ export default class PITChecker {
     }
 
     const { rates, total } = ratesDetail;
+    if (total === 0) {
+      result.checkAgainOn = reservation.dateOut;
+      result.deleteRegisterOn = reservation.dateOut;
+      result.paymentStatus = NOT_APPLICABLE;
+      await tempStorage.writeChecked(result);
+      return result;
+    }
+
     const sums = this.getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
     const todayDate = TODAY_DATE || "";

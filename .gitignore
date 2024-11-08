@@ -10,3 +10,4 @@ src/operations/invoicer/*-registerCard.pdf
 src/operations/invoicer/genericList.txt
 temp/
 .vscode
+src/operations/smart-report-comparer/
