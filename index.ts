@@ -34,19 +34,14 @@ async function main(): Promise<void> {
     if (userChoice === " Return ") {
       menuStack.pop();
     } else {
-      await menuUtils.processUserChoice(userChoice);
+      let choice = await menuUtils.processUserChoice(userChoice);
+      if (choice.status !== 200) {
+        menuStack.pop();
+      }
     }
   } while (true);
 
-  const location = searchForLocation("base");
-  console.log(location);
   return;
-}
-
-// This module will search for phone location
-async function searchForLocation(phoneUiid: string): Promise<any> {
-  // This will return the phone's coordinates to search it on Google Maps.
-  // Jazmin Benavides's project
 }
 
 main();

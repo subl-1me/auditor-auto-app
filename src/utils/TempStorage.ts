@@ -258,7 +258,7 @@ export class TempStorage {
           VIRTUAL_CARD: [],
           COUPON: [],
           CERTIFICATE: [],
-          UNKOWN: [],
+          UNKNOWN_DOCUMENT: [],
         },
         FULLY_PAID: [],
         PARTIAL_PAID: [],

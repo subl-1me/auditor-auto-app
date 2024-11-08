@@ -29,6 +29,7 @@ export default class MenuUtils {
     }
     const operationManager = new OperationManager();
     // perform operations
+
     const opResponse = await operationManager.handleOperation(
       choice,
       this.menuStack

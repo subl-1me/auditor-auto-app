@@ -9,6 +9,7 @@ import PITChecker from "./pit-checker/PitChecker";
 import Utils from "./utils/Utils";
 import PaymentApplier from "./prePaidApplier/prePaidApplier";
 import CheckReservation from "./check-reservation/CheckReservation";
+import SmartReportComparer from "./smart-report-comparer/SmartReportComparer";
 
 export default class OperationManager {
   constructor() {}
@@ -61,6 +62,9 @@ export default class OperationManager {
       case "Get reservation details":
         const utilRsrvRes = await utils.performUtil(operation);
         break;
+      case "Compare SMART report":
+        const comparer = new SmartReportComparer();
+        const comparerRes = await comparer.performComparer();
       default:
         operationResponse = {
           status: 404,

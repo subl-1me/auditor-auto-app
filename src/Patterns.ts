@@ -111,6 +111,17 @@ export const couponPatternsList: couponPatterns = {
     dateOutPattern: /salida:\s\w+\s\d{1,2},\s\d{4}/,
     ratePerDay: /tarifa(.*)\d+mxn/,
   },
+  couponBCD: {
+    primaryIdentificator: /bcd travel/,
+    reservationIdTargetSentence: new RegExp(/\d{8}/, "g"),
+    reservationId: /\d{8}/,
+    rfcPattern:
+      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
+    dateInPattern: /\d{2}\/\d{2}\/\d{4}/,
+    dateOutPattern: /\d{2}\/\d{2}\/\d{4}/,
+    bothDatesPattern: /\d{2}\/\d{2}\/\d{4}/g,
+    bothRatesPattern: /tarifa:(.*)\d+\.\d+/g,
+  },
 };
 
 // VCC patterns

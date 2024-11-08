@@ -1170,6 +1170,7 @@ export default class Invoicer {
   }
 
   async getReceptorInfo(RFC: string): Promise<any> {
+	  console.log(RFC);
     if (RFC === "" || !RFC) {
       return {
         error: true,

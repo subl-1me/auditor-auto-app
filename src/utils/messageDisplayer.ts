@@ -11,6 +11,7 @@ export default class MessageDisplayer {
 
     if (response.status !== 200) {
       console.log("\u001b[31m Operation failed due the following error:");
+      console.log(response);
       console.log(response.error + "\n");
     }
   }

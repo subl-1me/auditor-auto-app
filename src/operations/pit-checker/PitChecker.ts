@@ -193,6 +193,7 @@ export default class PITChecker {
     };
     let rsrvWithCertificate: any[] = [];
     let rsrvWithCoupon: any[] = [];
+    let rsrvWithDocs: any[] = [];
     let rsrvWithVirtualCard: any[] = [];
     const { checkedList } = await tempStorage.readChecked();
 
@@ -261,13 +262,15 @@ export default class PITChecker {
           break;
         }
         case PRE_PAID: {
+          // Virtual card case
           if (
             result.prePaidMethod &&
             result.prePaidMethod.type === VIRTUAL_CARD
           ) {
             rsrvWithVirtualCard.push({
               room: result.room,
-              virtualCard: result.prePaidMethod,
+              virtualCard: result.prePaidMethod.data.provider,
+              readyToCharge: result.prePaidMethod.data.readyToCharge,
             });
             await tempStorage.writeCheckedOn(PRE_PAID, {
               room: result.room,
@@ -276,10 +279,13 @@ export default class PITChecker {
             });
           }
 
+          // Coupon case
           if (result.prePaidMethod && result.prePaidMethod.type === COUPON) {
             rsrvWithCoupon.push({
               room: result.room,
-              coupon: result.prePaidMethod,
+              coupon: result.prePaidMethod.data.coupons[0].providerName,
+              pass: result.prePaidMethod.data.coupons[0].analyzerResult
+                .comparission.pass,
             });
             await tempStorage.writeCheckedOn(PRE_PAID, {
               room: result.room,
@@ -287,6 +293,7 @@ export default class PITChecker {
             });
           }
 
+          // Certificate case
           if (
             result.prePaidMethod &&
             result.prePaidMethod.type === CERTIFICATE
@@ -301,6 +308,18 @@ export default class PITChecker {
             });
           }
 
+          // Unkown document
+          if (
+            result.prePaidMethod &&
+            result.prePaidMethod.type === UNKNOWN_DOCUMENT
+          )
+            rsrvWithDocs.push({
+              room: result.room,
+            });
+          await tempStorage.writeCheckedOn(PRE_PAID, {
+            room: result.room,
+            prePaidMethod: result.prePaidMethod,
+          });
           break;
         }
         case FULLY_PAID: {
@@ -334,6 +353,8 @@ export default class PITChecker {
     console.log(rsrvWithVirtualCard);
     console.log("Coupon");
     console.log(rsrvWithCoupon);
+    console.log("Unkown documents");
+    console.log(rsrvWithDocs);
     console.log("Certificate");
     console.log(rsrvWithCertificate);
     console.log("error");
@@ -534,45 +555,45 @@ export default class PITChecker {
         const primaryCoupons = result.prePaidMethod.data.coupons.filter(
           (coupon: any) => coupon.isPrimary
         );
-        if (primaryCoupons.length === 0) {
-          result.paymentStatus = ERROR;
-          result.hasErrors = true;
-          result.errorDetail.type = "UNKOWN DOC";
-          result.errorDetail.detail = "Document is not supported.";
-        } else {
-          for (const coupon of primaryCoupons) {
-            const { comparission, patternMatches } = coupon.analyzerResult;
+        for (const coupon of primaryCoupons) {
+          const { comparission, patternMatches } = coupon.analyzerResult;
 
-            if (comparission.pass) {
-              // get invoice data
-              if (coupon.providerName === "couponACCESS") {
-                const registerCardAnalyzer =
-                  await this.registrationCardAnalyzer(reservation);
-                if (
-                  registerCardAnalyzer &&
-                  registerCardAnalyzer.RFC !== "" &&
-                  registerCardAnalyzer.RFC
-                ) {
-                  // save invoice data
-                  result.invoiceSettings.RFC = registerCardAnalyzer.RFC;
-                  result.invoiceSettings.companyName =
-                    registerCardAnalyzer.fiscalName;
+          if (comparission.pass) {
+            // get invoice data
+            if (coupon.providerName === "couponACCESS") {
+              const registerCardAnalyzer = await this.registrationCardAnalyzer(
+                reservation
+              );
+              if (
+                registerCardAnalyzer &&
+                registerCardAnalyzer.RFC !== "" &&
+                registerCardAnalyzer.RFC
+              ) {
+                // save invoice data
+                result.invoiceSettings.RFC = registerCardAnalyzer.RFC;
+                result.invoiceSettings.companyName =
+                  registerCardAnalyzer.fiscalName;
 
-                  // await tempStorage.writeChecked(result); // save on local
-                  // return result;
-                }
+                // await tempStorage.writeChecked(result); // save on local
+                // return result;
               }
-
-              result.invoiceSettings.RFC = patternMatches.RFC;
-              result.invoiceSettings.companyName = patternMatches.provider;
             }
+
+            result.invoiceSettings.RFC = patternMatches.RFC;
+            result.invoiceSettings.companyName = patternMatches.provider;
           }
         }
       }
 
+      // if (result.prePaidMethod.type === UNKNOWN_DOCUMENT) {
+      //   result.errorDetail.type = "UNKNOWN DOCUMENT";
+      //   result.errorDetail.detail = "Document is not supported.";
+      // }
+
       if (result.prePaidMethod.type === CERTIFICATE) {
         result.invoiceSettings.receptor = MARRIOTT_RECEPTOR;
         result.invoiceSettings.companyName = MARRIOTT_RECEPTOR.receptorNombre;
+        result.invoiceSettings.RFC = MARRIOTT_RECEPTOR.receptorNombre;
         result.invoiceSettings.note = prePaidMethod.data.code || "";
         result.invoiceSettings.fiscalUse = NO_FISCAL_USE;
       }

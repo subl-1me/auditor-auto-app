@@ -103,6 +103,7 @@ export const HOME_MENU_OPERATION_NAMES = [
   "Print docs",
   "Check reservation",
   "Check PIT",
+  "Compare SMART report",
   // "Check all virtual cards",
   "Utils",
   // "Settings",
