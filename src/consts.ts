@@ -65,15 +65,15 @@ export const EXPEDIA = "EXPEDIA";
 export const BOOKING = "BOOKING";
 
 // Reservation payment status
-export const FULLY_PAID = "FULLY PAID";
-export const PRE_PAID = "PRE PAID";
-export const PARTIAL_PAID = "PARTIAL PAID";
-export const MIXED_PAID = "MIXED PAID";
+export const FULLY_PAID = "FULLY_PAID";
+export const PRE_PAID = "PRE_PAID";
+export const PARTIAL_PAID = "PARTIAL_PAID";
+export const MIXED_PAID = "MIXED_PAID";
 export const PENDING = "PENDING";
 export const ERROR = "ERROR";
 export const ROUTED = "ROUTED";
 export const ROUTER = "ROUTER";
-export const NOT_APPLICABLE = "NOT APPLICABLE";
+export const NOT_APPLICABLE = "NOT_APPLICABLE";
 export const COUPON_NOT_PASS = "COUPON NOT PASS";
 
 // PrePaid Methods names

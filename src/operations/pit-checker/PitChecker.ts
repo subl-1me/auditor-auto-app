@@ -185,7 +185,6 @@ export default class PITChecker {
 
     let rsrvComplete: any[] = [];
     let rsrvPaidNights: any[] = [];
-    let rsrvPendingToCheck: any[] = [];
     let rsrvPendingToPay: any[] = [];
     let rsrvErrors: any[] = [];
     let routings: any = {
@@ -222,8 +221,8 @@ export default class PITChecker {
     }
 
     const results = await Promise.all(checkPromises);
+
     for (const result of results) {
-      // console.log(result);
       switch (result.paymentStatus) {
         case ROUTER: {
           routings.routers.push({
@@ -319,14 +318,15 @@ export default class PITChecker {
           if (
             result.prePaidMethod &&
             result.prePaidMethod.type === UNKNOWN_DOCUMENT
-          )
+          ) {
             rsrvWithDocs.push({
               room: result.room,
             });
-          await tempStorage.writeCheckedOn(PRE_PAID, {
-            room: result.room,
-            prePaidMethod: result.prePaidMethod,
-          });
+            await tempStorage.writeCheckedOn(PRE_PAID, {
+              room: result.room,
+              prePaidMethod: result.prePaidMethod,
+            });
+          }
           break;
         }
         case FULLY_PAID: {

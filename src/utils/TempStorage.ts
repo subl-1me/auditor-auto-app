@@ -4,9 +4,7 @@ import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
 
-import ReservationChecked from "../types/ReservationChecked";
-import Reservation from "../types/Reservation";
-import { PRE_PAID } from "../consts";
+import { NOT_APPLICABLE, PRE_PAID } from "../consts";
 import PitCheckerResult from "../types/PitCheckerResult";
 
 const STORAGE_TEMP_PATH = process.env.STORAGE_TEMP_PATH || "";
@@ -260,12 +258,12 @@ export class TempStorage {
           CERTIFICATE: [],
           UNKNOWN_DOCUMENT: [],
         },
+        NOT_APPLICABLE: [],
         FULLY_PAID: [],
         PARTIAL_PAID: [],
         ROUTER: [],
         ROUTED: [],
         ERROR: [],
-        HISTORY: [],
         checkedList: [],
       };
 
