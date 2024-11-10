@@ -665,31 +665,6 @@ export async function getReservationLedgerList(
   return ledgerList;
 }
 
-/**
- * @description It gets all the charges and payments sums
- * @param transactions
- * @returns An array with { chargesSum, PaymentsSum }
- */
-function getTransactionsSum(transactions: Transaction[]): any {
-  const chargesSum = transactions.reduce((accum, value) => {
-    if (value.type === "CHARGE" || value.isRefund) {
-      return (accum += value.amount);
-    }
-
-    return accum;
-  }, 0);
-
-  const paymentsSum = transactions.reduce((accum, transaction) => {
-    if (transaction.type === "PAYMENT" && !transaction.isRefund) {
-      return (accum += Math.abs(transaction.amount));
-    }
-
-    return accum;
-  }, 0);
-
-  return { chargesSum, paymentsSum };
-}
-
 function getRemainingNights(
   ratesDetails: RateDetails,
   balance: number,
@@ -2103,6 +2078,59 @@ export async function getReservationGuaranteeDocs(
   }
 
   return docs;
+}
+
+/**
+ * @description It gets all the charges and payments sums
+ * @param transactions
+ * @returns An array with { chargesSum, PaymentsSum }
+ */
+export async function getTransactionsSum(
+  transactions: Transaction[]
+): Promise<any> {
+  const chargesSum = transactions.reduce((accum, value) => {
+    if (value.type === "CHARGE" || value.isRefund) {
+      return (accum += value.amount);
+    }
+
+    return accum;
+  }, 0);
+
+  const paymentsSum = transactions.reduce((accum, transaction) => {
+    if (transaction.type === "PAYMENT" && !transaction.isRefund) {
+      return (accum += Math.abs(transaction.amount));
+    }
+
+    return accum;
+  }, 0);
+
+  return { chargesSum, paymentsSum };
+}
+
+export async function analyzeReservationRouting(
+  routing: any,
+  parentLedgers?: Ledger[]
+): Promise<any> {
+  const routedRates: any = [];
+  for (const reservationId of routing.routed) {
+    const rates = await getReservationRates(reservationId);
+    console.log(rates);
+    routedRates.push(rates);
+  }
+
+  parentLedgers = !parentLedgers
+    ? await getReservationLedgerList(routing.routerId, "CHIN")
+    : parentLedgers;
+
+  const parentLedgerClassification = await classifyLedgers(
+    routing.routerId,
+    parentLedgers
+  );
+  const { active } = parentLedgerClassification;
+
+  console.log(parentLedgerClassification);
+
+  // const sums = await getTransactionsSum(parentLedgers);
 }
 
 export async function getReservationRoutings(

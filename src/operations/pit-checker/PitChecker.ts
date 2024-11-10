@@ -15,6 +15,7 @@ import {
   checkAllRates,
   getReservationInvoiceList,
   getReservationLogs,
+  getTransactionsSum,
 } from "../../utils/reservationUtlis";
 import {
   CERTIFICATE,
@@ -60,99 +61,74 @@ export default class PITChecker {
     this.frontService = new FrontService();
   }
 
-  /**
-   * @description It gets all the charges and payments sums
-   * @param transactions
-   * @returns An array with { chargesSum, PaymentsSum }
-   */
-  private getTransactionsSum(transactions: Transaction[]): any {
-    const chargesSum = transactions.reduce((accum, value) => {
-      if (value.type === "CHARGE" || value.isRefund) {
-        return (accum += value.amount);
-      }
+  // async checkRouting(routing: any): Promise<any> {
+  //   console.log("Checking routing...");
 
-      return accum;
-    }, 0);
+  //   if (!routing) {
+  //     return null;
+  //   }
 
-    const paymentsSum = transactions.reduce((accum, transaction) => {
-      if (transaction.type === "PAYMENT" && !transaction.isRefund) {
-        return (accum += Math.abs(transaction.amount));
-      }
+  //   const router: Reservation = await getReservationById(routing.routedId);
+  //   if (!routing.isRouter) {
+  //     console.log(
+  //       `This reservation is routed to: ${router.guestName} -  ${router.room}`
+  //     );
+  //     return routing;
+  //   }
 
-      return accum;
-    }, 0);
+  //   const routed: Reservation[] = [];
+  //   for (const reservationId of routing.routed) {
+  //     let rsrv = await getReservationById(reservationId);
+  //     rsrv.ledgers = await getReservationLedgerList(reservationId, "CHIN");
+  //     routed.push(rsrv);
+  //   }
 
-    return { chargesSum, paymentsSum };
-  }
+  //   router.ledgers = await getReservationLedgerList(router.id, "CHIN");
+  //   // get router total payment recieved:
+  //   const activeLedger = router.ledgers.find((ledger) => ledger.isPrincipal);
+  //   // console.log("Active ledger for router: \n");
+  //   // console.log(activeLedger);
+  //   // console.log(activeLedger?.transactions);
 
-  async checkRouting(routing: any): Promise<any> {
-    console.log("Checking routing...");
+  //   let routingCheck = {
+  //     routing,
+  //     isRoutingOk: false,
+  //     diff: 9,
+  //     totalPaid: 0,
+  //     totalForAll: 0,
+  //   };
 
-    if (!routing) {
-      return null;
-    }
+  //   const sums = this.getTransactionsSum(activeLedger?.transactions || []);
+  //   const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
+  //   routingCheck.totalPaid = paymentsSum;
 
-    const router: Reservation = await getReservationById(routing.routedId);
-    if (!routing.isRouter) {
-      console.log(
-        `This reservation is routed to: ${router.guestName} -  ${router.room}`
-      );
-      return routing;
-    }
+  //   // console.log(`Payment sum: ${paymentsSum}`);
 
-    const routed: Reservation[] = [];
-    for (const reservationId of routing.routed) {
-      let rsrv = await getReservationById(reservationId);
-      rsrv.ledgers = await getReservationLedgerList(reservationId, "CHIN");
-      routed.push(rsrv);
-    }
-
-    router.ledgers = await getReservationLedgerList(router.id, "CHIN");
-    // get router total payment recieved:
-    const activeLedger = router.ledgers.find((ledger) => ledger.isPrincipal);
-    // console.log("Active ledger for router: \n");
-    // console.log(activeLedger);
-    // console.log(activeLedger?.transactions);
-
-    let routingCheck = {
-      routing,
-      isRoutingOk: false,
-      diff: 9,
-      totalPaid: 0,
-      totalForAll: 0,
-    };
-
-    const sums = this.getTransactionsSum(activeLedger?.transactions || []);
-    const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
-    routingCheck.totalPaid = paymentsSum;
-
-    // console.log(`Payment sum: ${paymentsSum}`);
-
-    // const routerId: routing.parentId;
-    // if (routings) {
-    //   if (routings.isParent) {
-    //     console.log("This reservation is ROUTER.");
-    //     result.routing.isParent = true;
-    //     result.routing.parentId = reservation.id;
-    //     result.paymentStatus = ROUTER;
-    //     result.routing.childs = routings.childs;
-    //     // console.log("Checking payment & rates...");
-    //     // const childReservations = reservations.filter(
-    //     //   (reservation, index) => reservation.room !== routings.childs[index]
-    //     // );
-    //     // console.log(routings);
-    //     console.log("\n");
-    //     await tempStorage.writeChecked(result); // save on local
-    //     return result;
-    //   }
-    //   console.log(
-    //     `This reservation is ROUTED to reservation ${routings.parent} `
-    //   );
-    //   result.routing.parentId = routings.parent;
-    //   result.paymentStatus = ROUTED;
-    //   return result;
-    // }
-  }
+  //   // const routerId: routing.parentId;
+  //   // if (routings) {
+  //   //   if (routings.isParent) {
+  //   //     console.log("This reservation is ROUTER.");
+  //   //     result.routing.isParent = true;
+  //   //     result.routing.parentId = reservation.id;
+  //   //     result.paymentStatus = ROUTER;
+  //   //     result.routing.childs = routings.childs;
+  //   //     // console.log("Checking payment & rates...");
+  //   //     // const childReservations = reservations.filter(
+  //   //     //   (reservation, index) => reservation.room !== routings.childs[index]
+  //   //     // );
+  //   //     // console.log(routings);
+  //   //     console.log("\n");
+  //   //     await tempStorage.writeChecked(result); // save on local
+  //   //     return result;
+  //   //   }
+  //   //   console.log(
+  //   //     `This reservation is ROUTED to reservation ${routings.parent} `
+  //   //   );
+  //   //   result.routing.parentId = routings.parent;
+  //   //   result.paymentStatus = ROUTED;
+  //   //   return result;
+  //   // }
+  // }
 
   async handelSaving(check: PitCheckerResult, checkType: string): Promise<any> {
     if (checkType === CHECK_ALL) {
@@ -660,11 +636,6 @@ export default class PITChecker {
         result.routing.isParent = true;
         result.routing.childs = routings.routed;
         result.routing.parentId = reservation.id;
-        // console.log("Checking payment & rates...");
-        // const childReservations = reservations.filter(
-        //   (reservation, index) => reservation.room !== routings.childs[index]
-        // );
-        // console.log(routings);
         await tempStorage.writeChecked(result); // save on local
         return result;
       }
@@ -698,7 +669,7 @@ export default class PITChecker {
       return result;
     }
 
-    const sums = this.getTransactionsSum(activeLedger.transactions);
+    const sums = await getTransactionsSum(activeLedger.transactions);
     const paymentsSum = Number(parseFloat(sums.paymentsSum).toFixed(2));
     const todayDate = TODAY_DATE || "";
 
