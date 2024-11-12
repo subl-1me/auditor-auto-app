@@ -50,6 +50,7 @@ import path from "path";
 import TokenStorage from "../../utils/TokenStorage";
 import { Rate } from "../../types/RateDetails";
 import inquirer from "inquirer";
+import { RateLog } from "../../types/LogCategorization";
 
 const { STORAGE_TEMP_PATH } = process.env;
 const docsTempStoragePath = path.join(STORAGE_TEMP_PATH || "", "docsToAnalyze");
@@ -505,18 +506,42 @@ export default class PITChecker {
 
     // TODO: Add an implemetation of a "RATE CHECKER" to avoid problems with future rates
     // console.log("Searching for pre-paid methods...");
+
+    const rateChangeLogs = await getReservationLogs(reservation.id);
+    // console.log(rateChangeLogs);
+    if (rateChangeLogs.rates.length > 1) {
+      rateChangeLogs.rates.forEach((rateLog) => {
+        result.remarks.push({
+          type: "RATE_CHANGE",
+          description: "A rate change was detected.",
+          data: rateLog,
+        });
+      });
+      // const todayRateLog = rateChangeLogs.rates.filter(
+      //   (rateLog) => rateLog.dateInfo?.isToday
+      // );
+
+      // if (todayRateLog.length > 0) {
+      //   const todayRateChanges = todayRateLog.reduce((recent, current) => {
+      //     return (current.dateInfo?.diffMs || 0) <
+      //       (recent.dateInfo?.diffMs || 0)
+      //       ? current
+      //       : recent;
+      //   });
+
+      //   result.remarks.push({
+      //     type: "RATE_CHANGE",
+      //     description: `Today rate changes were detected. Last: ${todayRateChanges.dateInfo?.diffHours} hours, ${todayRateChanges.dateInfo?.diffMins} minutes & ${todayRateChanges.dateInfo?.diffMs} seconds ago.`,
+      //     data: todayRateLog,
+      //   });
+      // }
+    }
+
     const prePaidMethod = await PrePaid.getPrePaidMethod(reservation);
     if (prePaidMethod) {
       // if (ledgerClassification.active.length > 0) {
       //   ledgerClassification.active[0].isPrincipal = true;
-      // }
-      const rateChangeLogs = await getReservationLogs(reservation.id);
-      if (rateChangeLogs.length > 1) {
-        result.remarks.push({
-          type: RATE_CHANGE,
-          description: `Rate was changed (${rateChangeLogs.length}) times. Please verify.`,
-        });
-      }
+      //
 
       result.paymentStatus = PRE_PAID;
       result.prePaidMethod = prePaidMethod;

@@ -4,6 +4,7 @@ import PrePaidMethod from "./PrePaidMethod";
 interface CheckerRemarks {
   type: string;
   description: string;
+  data?: any;
 }
 
 // interface Receptor{

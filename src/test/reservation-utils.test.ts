@@ -3,6 +3,11 @@ import { describe, it } from "mocha";
 import Scrapper from "../Scrapper";
 import PitChecker from "../operations/pit-checker/PitChecker";
 import fs from "fs";
+import {
+  RateLog,
+  LogCategorization,
+  DateInfo,
+} from "../types/LogCategorization";
 
 import {
   analyzeDoc,
@@ -15,6 +20,7 @@ import {
   getReservationRateCode,
   getReservationRoutings,
   getReservationContact,
+  getReservationLogs,
 } from "../utils/reservationUtlis";
 import MockData from "./mock/mock-data";
 import Reservation from "../types/Reservation";
@@ -60,6 +66,121 @@ describe("Reservation-utils test suite", async () => {
   // });
 
   it("Should check all reservation and its payments and rates", async () => {});
+
+  // it("Should get all rates changes in reservation logs", async (done) => {
+  //   const reservationId = "23064300";
+  //   // const logs = await getReservationLogs(reservationId);
+
+  //   const sanitPattern = /<td>|<\/td>/g;
+  //   const rates = [
+  //     {
+  //       oldValue: "1433.5200",
+  //       newValue: "1854.03",
+  //       dateString: "<td>11/8/2024 3:44:22 PM</td>",
+  //     },
+  //     {
+  //       oldValue: "1433.5200",
+  //       newValue: "1854.03",
+  //       dateString: "<td>11/8/2024 3:40:51 PM</td>",
+  //     },
+  //     {
+  //       oldValue: "2179.0000",
+  //       newValue: "1433.52",
+  //       dateString: "<td>11/8/2024 8:29:35 AM</td>",
+  //     },
+  //     {
+  //       oldValue: "2179.0000",
+  //       newValue: "2129.00",
+  //       dateString: "<td>11/10/2024 11:05:14 AM</td>",
+  //     },
+  //     {
+  //       oldValue: "2179.0000",
+  //       newValue: "2129.00",
+  //       dateString: "<td>11/11/2024 3:00:00 PM</td>",
+  //     },
+  //     {
+  //       oldValue: "",
+  //       newValue: "2129.00",
+  //       dateString: "<td>11/11/2024 3:25:00 PM</td>",
+  //     },
+  //   ];
+
+  //   const todayDate = "2024/11/11";
+  //   const [tYear, tMonth, tDay] = todayDate.split("/").map(Number);
+
+  //   let todayRateChanges: any = [];
+  //   let diffs: LogCategorization = {
+  //     rates: [],
+  //   };
+
+  //   rates.forEach((rate: RateLog) => {
+  //     console.log(rate);
+  //     const logDateSanit = rate.dateString.replace(sanitPattern, "");
+  //     const [logDateString, logHour] = logDateSanit.split(" ");
+  //     const [logMonth, logDay, logYear] = logDateString.split("/").map(Number);
+
+  //     console.log("There are recently rate changes.");
+  //     todayRateChanges.push(rate);
+
+  //     // get time difference
+  //     let [hourNum, minNum, secNum] = logHour.split(":").map(Number);
+  //     if (logDateSanit.includes("PM") && hourNum < 12) {
+  //       hourNum += 12;
+  //     } else if (logDateSanit.includes("AM") && hourNum === 12) {
+  //       hourNum = 0;
+  //     }
+
+  //     const logDate = new Date(
+  //       logYear,
+  //       logMonth - 1,
+  //       logDay,
+  //       hourNum,
+  //       minNum,
+  //       secNum
+  //     );
+
+  //     const today = new Date();
+  //     const diffMs = today.getTime() - logDate.getTime();
+  //     const diffSecs = diffMs / 1000;
+  //     const diffMins = Math.floor((diffSecs % 3600) / 60);
+  //     const diffHours = diffMs / 3600000;
+
+  //     diffs.rates.push({
+  //       oldValue: rate.oldValue,
+  //       dateInfo,
+  //     });
+
+  //     // if (Object.keys(diffs.rate).length === 0) {
+  //     //   diffs.push({})
+  //     //   diffs.min = diffMinutes;
+  //     //   diffs.secs = diffSecs;
+  //     //   diffs.hours = diffHours;
+  //     //   diffs.rate = rate;
+  //     // } else {
+  //     //   if (diffMinutes < diffs.min) {
+  //     //     diffs.min = diffMinutes;
+  //     //     diffs.secs = diffSecs;
+  //     //     diffs.hours = diffHours;
+  //     //   }
+  //     // }
+  //   });
+
+  //   console.log("Today changes:");
+  //   console.log(todayRateChanges);
+  //   // console.log(diffs);
+  //   console.log("Most recently change: ");
+  //   const mostRecentChange = diffs.reduce((recent: any, current: any) => {
+  //     return current.ms < recent.ms ? current : recent;
+  //   });
+  //   console.log(mostRecentChange);
+
+  //   // if (Object.keys(diffs.rate).length === 0) {
+  //   //   diffs.rate = rates[rates.length];
+  //   // }
+  //   // console.log(logs);
+
+  //   done();
+  // });
 
   it("Should get reservation code", async () => {
     // const result = await getReservationRateCode("20493304");

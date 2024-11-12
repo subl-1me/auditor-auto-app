@@ -12,6 +12,7 @@ import Transaction from "../types/Transaction";
 import GuaranteeDoc from "../types/GuaranteeDoc";
 import { RateDetails, Rate } from "../types/RateDetails";
 import ReservationLog from "../types/ReservationLog";
+import { getDateInfo } from "../utils/dateUtils";
 
 import {
   DEPARTURES_FILTER,
@@ -36,6 +37,7 @@ import {
 import path from "path";
 import VCC from "../types/VCC";
 import { TempStorage } from "./TempStorage";
+import { LogCategorization, RateLog } from "../types/LogCategorization";
 
 const frontService = new FrontService();
 const {
@@ -66,10 +68,15 @@ const {
   FRONT_API_RESERVATION_LOGS,
 } = process.env;
 
-export async function getReservationLogs(reservationId: string): Promise<any> {
+export async function getReservationLogs(
+  reservationId: string
+): Promise<LogCategorization> {
+  let LogCategorization = {
+    rates: [],
+  };
   if (!reservationId || reservationId === "") {
     console.log("Reservation ID is required.");
-    return;
+    return LogCategorization;
   }
 
   const _FRONT_API_RESERVATION_LOGS = FRONT_API_RESERVATION_LOGS?.replace(
@@ -85,7 +92,7 @@ export async function getReservationLogs(reservationId: string): Promise<any> {
 
   if (response === "") {
     console.log("No response data was recieved on log response.");
-    return;
+    return LogCategorization;
   }
 
   const scrapper = new Scrapper(response);
@@ -94,9 +101,14 @@ export async function getReservationLogs(reservationId: string): Promise<any> {
   return logsCategorization;
 }
 
-async function categorizeReservationLogs(logs: any): Promise<ReservationLog[]> {
-  let reservationLogs: ReservationLog[] = [];
+async function categorizeReservationLogs(
+  logs: any
+): Promise<LogCategorization> {
+  let reservationLogs: LogCategorization = {
+    rates: [],
+  };
 
+  // get change rate logs
   logs.forEach((row: any) => {
     const tableHeadNameMatch = row.match(/<th>(.*)<\/th>/);
     const tableDataMatch = row.match(/<td(.*?)>(.*)<\/td>/g);
@@ -112,15 +124,19 @@ async function categorizeReservationLogs(logs: any): Promise<ReservationLog[]> {
       let newValueContent = newValueMatchContent[2] || "";
       let oldValueContent = oldValueMatchContent[2] || "";
 
-      reservationLogs.push({
-        field: tableHeadName || "",
+      reservationLogs.rates.push({
         oldValue: oldValueContent,
         newValue: newValueContent,
-        changeDate: tableDataMatch ? tableDataMatch[3] : "",
+        dateString: tableDataMatch ? tableDataMatch[3] : "",
       });
     }
   });
 
+  // get date additional info for each rate log
+  reservationLogs.rates.forEach((rateLog) => {
+    rateLog.dateInfo = getDateInfo(rateLog);
+    console.log(rateLog.dateInfo);
+  });
   return reservationLogs;
 }
 
