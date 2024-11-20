@@ -368,6 +368,19 @@ export default class DocumentAnalyzer {
       });
     }
 
+    // if(couponProvider === "couponNOKTOS"){
+    //   const datePattern = /\d{4}-\d{2}-\d{2}/;
+    //   if (dateInMatcher) {
+    //     const checkIn = dateInMatcher[0].match(datePattern);
+    //     recopiled.checkIn = checkIn ? checkIn[0] : "";
+    //   }
+
+    //   if (dateOutMatcher) {
+    //     const checkOut = dateOutMatcher[0].match(datePattern);
+    //     recopiled.checkOut = checkOut ? checkOut[0] : "";
+    //   }
+    // }
+
     // switch (couponProvider) {
     //   case "couponAccess":
     //     datesMatch = text.match(datesPattern);

@@ -106,7 +106,10 @@ export const HOME_MENU_OPERATION_NAMES = [
   "Check PIT",
   "Compare SMART report",
   // "Check all virtual cards",
-  "Utils",
+  // "Utils",
+  "Create routing",
+  "Create routing to Virtual Folio",
+  "Get reservation details",
   // "Settings",
   " Exit ",
 ];

@@ -122,6 +122,17 @@ export const couponPatternsList: couponPatterns = {
     bothDatesPattern: /\d{2}\/\d{2}\/\d{4}/g,
     bothRatesPattern: /tarifa:(.*)\d+\.\d+/g,
   },
+  couponNOKTOS: {
+    primaryIdentificator: /noktos/,
+    reservationIdTargetSentence: /codigo(.*)de(.*)reservación:(.*)\d{8}/,
+    reservationId: /\d{8}/,
+    rfcPattern:
+      /.{3}\d{7}.{1}\d{1}|.{3}\d{6}.{2}\d{1}|.{3}\d{9}|.{3}\d{6}.{1}\d{2}|.{3}\d{7}.{2}|.{3}\d{6}.{3}/g,
+    dateInPattern: /check(.*)in:(.*)\d{4}-\d{2}-\d{2}/,
+    dateOutPattern: /check(.*)out:(.*)\d{4}-\d{2}-\d{2}/,
+    hotelTarget: /city express ciudad juarez/,
+    guestNameSentence: /huésped:(.*)\s/,
+  },
 };
 
 // VCC patterns
