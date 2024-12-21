@@ -135,7 +135,7 @@ async function categorizeReservationLogs(
   // get date additional info for each rate log
   reservationLogs.rates.forEach((rateLog) => {
     rateLog.dateInfo = getDateInfo(rateLog);
-    console.log(rateLog.dateInfo);
+    // console.log(rateLog.dateInfo);
   });
   return reservationLogs;
 }

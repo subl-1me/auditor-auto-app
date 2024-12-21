@@ -10,9 +10,9 @@ export const getDateInfo = (rateLog: RateLog) => {
   const [logDateString, logHour] = logDateSanit.split(" ");
   const [logMonth, logDay, logYear] = logDateString.split("/").map(Number);
 
-  console.log(logDateString);
+  // console.log(logDateString);
 
-  console.log(logHour);
+  // console.log(logHour);
   // get time difference
   let [hourNum, minNum, secNum] = logHour.split(":").map(Number);
   if (logDateSanit.includes("PM") && hourNum < 12) {
@@ -21,7 +21,7 @@ export const getDateInfo = (rateLog: RateLog) => {
     hourNum = 0;
   }
 
-  console.log(hourNum, minNum, secNum);
+  // console.log(hourNum, minNum, secNum);
   const logDate = new Date(
     logYear,
     logMonth - 1,
@@ -38,8 +38,8 @@ export const getDateInfo = (rateLog: RateLog) => {
   const diffHours = diffMs / 3600000;
 
   const isToday = (date: Date) => {
-    console.log(today);
-    console.log(logDate);
+    // console.log(today);
+    // console.log(logDate);
     return (
       date.getDay() === today.getDay() &&
       date.getMonth() === today.getMonth() &&
